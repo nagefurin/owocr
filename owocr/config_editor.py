@@ -313,6 +313,17 @@ class ConfigGUI:
                 ('pretrained_model_name_or_path', 'str', 'Model name or path', 'kha-white/manga-ocr-base'),
                 ('force_cpu', 'bool', 'Force CPU usage', False),
             ],
+            'hayaiocr': [
+                ('pretrained_model_name_or_path', 'str', 'Model name or path (blank = Hayai default)', ''),
+                ('backend', 'str', 'Backend: torch or litert', 'torch'),
+                ('force_cpu', 'bool', 'Force CPU usage', False),
+                ('quantize', 'str', 'Torch quantization: int4, int8, or blank', ''),
+                ('litert_quant', 'str', 'LiteRT quantization (wi4, wi8_afp32, dynamic_wi4, dynamic_wi8)', 'wi4'),
+                ('litert_model_path', 'str', 'Local LiteRT model directory (blank = download)', ''),
+                ('litert_threads', 'int', 'LiteRT threads (0 = automatic)', 0),
+                ('compile', 'bool', 'Use torch.compile for the torch backend', True),
+                ('max_num_patches', 'int', 'Torch NaFlex patch budget (0 = Hayai default)', 0),
+            ],
             'easyocr': [
                 ('gpu', 'bool', 'Use GPU if available', True),
             ],

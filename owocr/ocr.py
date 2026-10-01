@@ -640,6 +640,131 @@ class MangaOcr:
             img.close()
         return x
 
+
+class HayaiOCREngine:
+    name = 'hayaiocr'
+    readable_name = 'Hayai OCR'
+    key = 'y'
+    config_entry = 'hayaiocr'
+    available = False
+    local = True
+    manual_language = False
+    coordinate_support = False
+    threading_support = True
+    capabilities = EngineCapabilities(
+        symbols=False,
+        symbol_bounding_boxes=False,
+        words=False,
+        word_bounding_boxes=False,
+        lines=True,
+        line_bounding_boxes=False,
+        paragraphs=False,
+        paragraph_bounding_boxes=False
+    )
+
+    def _import_dependencies(self):
+        logger.info('Loading dependencies for Hayai OCR')
+        try:
+            with GlobalImport():
+                from hayai_ocr import HayaiOcr as HayaiOcrModel
+        except ImportError:
+            logger.warning('Dependencies not available, Hayai OCR will not work! Install with "pip install \"owocr[hayaiocr]\""')
+            return False
+
+        self._hayai_ocr_model = HayaiOcrModel
+        return True
+
+    @staticmethod
+    def _optional_string(config, name):
+        value = config.get(name)
+        if value is None:
+            return None
+        value = str(value).strip()
+        return value if value else None
+
+    def __init__(self, config={}):
+        if not self._import_dependencies():
+            return
+
+        backend = str(config.get('backend', 'torch')).strip().lower()
+        if backend in ('tflite', 'lite_rt'):
+            backend = 'litert'
+        if backend not in ('torch', 'litert'):
+            logger.warning(f'Unknown Hayai OCR backend "{backend}". Use "torch" or "litert".')
+            return
+
+        model_path = self._optional_string(config, 'pretrained_model_name_or_path')
+        quantize = self._optional_string(config, 'quantize')
+        if quantize and quantize.lower() in ('none', 'off', 'false'):
+            quantize = None
+
+        litert_quant = self._optional_string(config, 'litert_quant') or 'wi4'
+        litert_model_path = self._optional_string(config, 'litert_model_path')
+
+        litert_threads = config.get('litert_threads')
+        if not isinstance(litert_threads, int) or litert_threads <= 0:
+            litert_threads = None
+
+        max_num_patches = config.get('max_num_patches')
+        if not isinstance(max_num_patches, int) or max_num_patches <= 0:
+            max_num_patches = None
+
+        compile_model = config.get('compile', True)
+        if not isinstance(compile_model, bool):
+            compile_model = str(compile_model).lower() == 'true'
+
+        kwargs = {
+            'force_cpu': bool(config.get('force_cpu', False)),
+            'backend': backend,
+            'litert_quant': litert_quant,
+            'litert_model_path': litert_model_path,
+            'litert_threads': litert_threads,
+            'compile': compile_model,
+            'max_num_patches': max_num_patches,
+        }
+
+        if model_path:
+            kwargs['pretrained_model_name_or_path'] = model_path
+        if quantize:
+            kwargs['quantize'] = quantize
+
+        try:
+            self.model = self._hayai_ocr_model(**kwargs)
+        except Exception as e:
+            logger.warning(f'Hayai OCR failed to initialize: {e}')
+            return
+
+        self.available = True
+        logger.info(f'Hayai OCR ready ({backend} backend)')
+
+    def __call__(self, img):
+        img, is_path = input_to_pil_image(img)
+        if not img:
+            return (False, 'Invalid image provided')
+
+        try:
+            text = self.model(img)
+        except Exception as e:
+            if is_path:
+                img.close()
+            return (False, f'Hayai OCR error: {e}')
+
+        if is_path:
+            img.close()
+
+        if isinstance(text, (list, tuple)):
+            text = text[0] if text else ''
+
+        result = []
+        for line in str(text).splitlines():
+            if not line.strip():
+                if result and result[-1] != '\n':
+                    result.append('\n')
+            else:
+                result.append(line)
+
+        return (True, result)
+
 class GoogleVision:
     name = 'gvision'
     readable_name = 'Google Vision'

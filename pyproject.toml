@@ -87,6 +87,14 @@ mangaocr = [
     "shapely"
 ]
 
+hayaiocr = [
+    "hayai-ocr>=2.3.0"
+]
+
+hayaiocr-litert = [
+    "hayai-ocr[litert]>=2.3.0"
+]
+
 winocr = [
     "winocrfix;platform_system=='Windows'"
 ]
