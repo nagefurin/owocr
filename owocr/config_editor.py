@@ -325,7 +325,6 @@ class ConfigGUI:
                 ('hayainova_path', 'str', 'Hayai v2.5-nova model name or path', 'JustANormalTinkerer/hayai-ocr-v2.5-nova'),
                 ('hayaiv2_path', 'str', 'Hayai v2 model name or path', 'JustANormalTinkerer/hayai-ocr-v2'),
                 ('siglip2_path', 'str', 'Local Hayai SigLIP2 processor/config directory (blank = Hugging Face)', ''),
-                ('hayai_modules_path', 'str', 'Hayai Transformers dynamic-module cache directory (blank = default)', ''),
                 ('hayaiv1_path', 'str', 'Hayai v1 model name or path', 'JustANormalTinkerer/hayai-ocr'),
                 ('use_v2', 'bool', 'Use the previous Hayai v2 model instead of v2.5-nova', False),
                 ('use_v1', 'bool', 'Use the legacy Hayai v1 model', False),
