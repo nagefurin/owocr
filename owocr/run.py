@@ -29,12 +29,6 @@ if _meiki_cache:
     os.environ['HF_HOME'] = _meiki_cache
     os.environ['HF_HUB_CACHE'] = os.path.join(_meiki_cache, 'hub')
 
-_hayai_config = config.get_engine('hayaiocr')
-_hayai_modules_cache = _hayai_config.get('hayai_modules_path') if _hayai_config else None
-if _hayai_modules_cache:
-    _hayai_modules_cache = os.path.abspath(os.path.expandvars(os.path.expanduser(str(_hayai_modules_cache))))
-    os.environ['HF_MODULES_CACHE'] = _hayai_modules_cache
-
 from .ocr import *
 from .screen_coordinate_picker import get_screen_selection, terminate_selector_if_running
 from .config_editor import main as config_editor_main
