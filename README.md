@@ -153,6 +153,18 @@ For local LiteRT exports, set `litert_model_path` to the `litert_exports` parent
 
 Hayai OCR 2.3.0 is the current PyPI release used by this integration.
 
+Hayai v2/v2.5 uses Google's `google/siglip2-base-patch16-naflex` processor/config in addition to the Hayai checkpoint. By default this dependency is loaded through the Hugging Face cache. To keep it portable, set `siglip2_path` to a local directory containing the SigLIP2 processor/config files. OwOCR redirects Hayai's fixed SigLIP2 repository reference to that directory only while constructing Hayai, so other Hugging Face-backed engines keep their own cache behavior.
+
+For example:
+
+    [hayaiocr]
+    hayainova_path = C:\Users\yourusername\.config\owocr\hayainova
+    siglip2_path = C:\Users\yourusername\.config\owocr\siglip2
+    backend = torch
+    compile = False
+
+The local SigLIP2 directory should contain the small processor/config files from `google/siglip2-base-patch16-naflex` (such as `config.json`, `preprocessor_config.json`, and the tokenizer files). The large `model.safetensors` file from the standalone SigLIP2 repository is not required by Hayai because the vision weights are already part of the Hayai checkpoint.
+
 ### Portable local model paths
 
 The following local engines accept configurable model/resource paths in `owocr_config.ini`, which makes moving an OwOCR setup between Windows installs easier:
