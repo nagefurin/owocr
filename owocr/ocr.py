@@ -640,6 +640,182 @@ class MangaOcr:
             img.close()
         return x
 
+
+class HayaiOCREngine:
+    name = 'hayaiocr'
+    readable_name = 'Hayai OCR'
+    key = 'y'
+    config_entry = 'hayaiocr'
+    available = False
+    local = True
+    manual_language = False
+    coordinate_support = False
+    threading_support = True
+    capabilities = EngineCapabilities(
+        symbols=False,
+        symbol_bounding_boxes=False,
+        words=False,
+        word_bounding_boxes=False,
+        lines=True,
+        line_bounding_boxes=False,
+        paragraphs=False,
+        paragraph_bounding_boxes=False
+    )
+
+    def _import_dependencies(self):
+        logger.info('Loading dependencies for Hayai OCR')
+        try:
+            with GlobalImport():
+                from hayai_ocr import HayaiOcr as HayaiOcrModel
+        except ImportError:
+            logger.warning('Dependencies not available, Hayai OCR will not work! Install with "pip install \\"owocr[hayaiocr]\\\""')
+            return False
+
+        self._hayai_ocr_model = HayaiOcrModel
+        return True
+
+    @staticmethod
+    def _optional_string(config, name):
+        value = config.get(name)
+        if value is None:
+            return None
+        value = str(value).strip()
+        return value if value else None
+
+    @staticmethod
+    def _bool_value(config, name, default=False):
+        value = config.get(name, default)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() == 'true'
+        return bool(value)
+
+    def __init__(self, config={}):
+        if not self._import_dependencies():
+            return
+
+        backend = str(config.get('backend', 'torch')).strip().lower()
+        if backend in ('tflite', 'lite_rt'):
+            backend = 'litert'
+        if backend not in ('torch', 'litert'):
+            logger.warning(f'Unknown Hayai OCR backend "{backend}". Use "torch" or "litert".')
+            return
+
+        use_v1 = self._bool_value(config, 'use_v1', False)
+        use_v2 = self._bool_value(config, 'use_v2', False)
+        if use_v1 and use_v2:
+            logger.warning('Hayai OCR cannot use both use_v1 and use_v2; disable one of them.')
+            return
+
+        legacy_model_path = self._optional_string(config, 'pretrained_model_name_or_path')
+        hayainova_path = self._optional_string(config, 'hayainova_path') or 'JustANormalTinkerer/hayai-ocr-v2.5-nova'
+        hayaiv2_path = self._optional_string(config, 'hayaiv2_path') or 'JustANormalTinkerer/hayai-ocr-v2'
+        hayaiv1_path = self._optional_string(config, 'hayaiv1_path') or 'JustANormalTinkerer/hayai-ocr'
+
+        if use_v1:
+            model_path = hayaiv1_path
+        elif use_v2:
+            model_path = hayaiv2_path
+        else:
+            model_path = hayainova_path
+            if legacy_model_path and not self._optional_string(config, 'hayainova_path'):
+                model_path = legacy_model_path
+
+        quantize = self._optional_string(config, 'quantize')
+        if quantize and quantize.lower() in ('none', 'off', 'false'):
+            quantize = None
+
+        litert_quant = self._optional_string(config, 'litert_quant') or 'wi4'
+        litert_quant_aliases = {
+            'float': 'none',
+            'none': 'none',
+            'wi8': 'wi8_afp32',
+            'wi8_afp32': 'wi8_afp32',
+            'int8': 'wi8_afp32',
+            'wi4': 'wi4',
+            'int4': 'wi4',
+            'dynamic_wi8': 'dynamic_wi8',
+            'dynamic_int8': 'dynamic_wi8',
+            'dynamic_wi4': 'dynamic_wi4',
+            'dynamic_int4': 'dynamic_wi4',
+        }
+        litert_quant = litert_quant_aliases.get(litert_quant.lower())
+        if litert_quant is None:
+            logger.warning('Unknown Hayai OCR LiteRT quantization. Use "float", "wi8", or "wi4".')
+            return
+
+        litert_model_path = self._optional_string(config, 'litert_model_path')
+        if backend == 'litert' and litert_model_path:
+            litert_model_path = str(Path(litert_model_path) / litert_quant)
+
+        litert_threads = config.get('litert_threads')
+        if not isinstance(litert_threads, int) or litert_threads <= 0:
+            litert_threads = None
+
+        max_num_patches = config.get('max_num_patches')
+        if not isinstance(max_num_patches, int) or max_num_patches <= 0:
+            max_num_patches = None
+
+        compile_model = self._bool_value(config, 'compile', True)
+
+        kwargs = {
+            'pretrained_model_name_or_path': model_path,
+            'force_cpu': self._bool_value(config, 'force_cpu', False),
+            'backend': backend,
+            'litert_quant': litert_quant,
+            'litert_model_path': litert_model_path,
+            'litert_threads': litert_threads,
+            'compile': compile_model,
+            'max_num_patches': max_num_patches,
+        }
+
+        if use_v1:
+            kwargs['use_v1'] = True
+        elif use_v2:
+            kwargs['use_v2'] = True
+
+        if quantize:
+            kwargs['quantize'] = quantize
+
+        try:
+            self.model = self._hayai_ocr_model(**kwargs)
+        except Exception as e:
+            logger.warning(f'Hayai OCR failed to initialize: {e}')
+            return
+
+        model_name = 'v1' if use_v1 else ('v2' if use_v2 else 'v2.5-nova')
+        self.available = True
+        logger.info(f'Hayai OCR ready ({model_name}, {backend} backend)')
+
+    def __call__(self, img):
+        img, is_path = input_to_pil_image(img)
+        if not img:
+            return (False, 'Invalid image provided')
+
+        try:
+            text = self.model(img)
+        except Exception as e:
+            if is_path:
+                img.close()
+            return (False, f'Hayai OCR error: {e}')
+
+        if is_path:
+            img.close()
+
+        if isinstance(text, (list, tuple)):
+            text = text[0] if text else ''
+
+        result = []
+        for line in str(text).splitlines():
+            if not line.strip():
+                if result and result[-1] != '\\n':
+                    result.append('\\n')
+            else:
+                result.append(line)
+
+        return (True, result)
+
 class GoogleVision:
     name = 'gvision'
     readable_name = 'Google Vision'

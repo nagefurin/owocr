@@ -23,11 +23,11 @@ Easy to install Windows and macOS packages can be downloaded [here](https://gith
 - A "Log Viewer" window will shop up, showing information messages. A tray icon in the macOS menu bar/Windows task bar will show up. You can close the log viewer if you want.
 - By default owocr monitors the clipboard for images and outputs recognized text back to the clipboard. You can change this from the configuration, accessible from the tray icon.
 - With a left click on the tray icon you can pause/unpause on Windows, from the right click menu (left click on macOS) you can change the engine, pause/unpause, change the screen capture area selection, take a screenshot of the selected screen/window, launch the configuration, and reopen the log viewer if you closed it. The icon will be dimmed to show when owocr is paused.
-- In these versions all the OCR engines and features are already available, you don't need to install anything else. The tray icon is always enabled and can't be turned off.
+- In these versions the engines included by the release build are already available, so you don't need to install anything else for those engines. Hayai OCR is currently an optional Python engine and can be added with `pip install "owocr[hayaiocr]"`. The tray icon is always enabled and can't be turned off.
 
 ## Installation (terminal+Python, all operating systems)
 
-OwOCR has been tested on Python 3.11 to 3.14. It can be installed with `pip install owocr` after you install Python. You also need to have one or more OCR engines, check the list below for instructions. I recommend installing at least Google Lens on any operating system, and OneOCR if you are on Windows. Bing is pre-installed, Apple Vision and Live Text come pre-installed on macOS.
+OwOCR has been tested on Python 3.11 to 3.14. It can be installed with `pip install owocr` after you install Python. You also need to have one or more OCR engines, check the list below for instructions. I recommend installing at least Google Lens on any operating system, and OneOCR if you are on Windows. Bing is pre-installed, Apple Vision and Live Text come pre-installed on macOS. Hayai OCR is an optional local engine.
 
 ## Usage (terminal)
 
@@ -91,6 +91,7 @@ Then launch owocr with: `PYNPUT_BACKEND_KEYBOARD=uinput owocr -r screencapture` 
 - [meikiocr](https://github.com/rtr46/meikiocr) - **Recommended** - Comparable to OneOCR in accuracy and CPU latency. It's limited to 64 text lines and 48 characters per line. → Terminal: install with `pip install "owocr[meikiocr]"`, if you have a Nvidia GPU you can do `pip uninstall onnxruntime && pip install onnxruntime-gpu` which makes it the fastest OCR available. Key: `k`
 - [NDLOCR-Lite](https://github.com/ndl-lab/ndlocr-lite) - An engine from the Japanese National Diet Library's Lab, mostly suited to documents and book scans. → Terminal: install with `pip install "owocr[ndlocrlite]"`, Key: `h`
 - [Manga OCR](https://github.com/kha-white/manga-ocr) (with optional [comic-text-detector](https://github.com/dmMaze/comic-text-detector) as segmenter) → Terminal: install with `pip install "owocr[mangaocr]"`, keys: `m` (regular, ideal for small text areas), `n` (segmented, ideal for manga panels/larger images with multiple text areas)
+- [Hayai OCR](https://github.com/NopeNopeGuy/hayai-ocr) → Terminal: install with `pip install "owocr[hayaiocr]"`, key: `y`. Hayai OCR v2.5-nova is the default model. It supports Japanese, Chinese, and Korean manga-style text and can recognize multiple lines in one pass. For the LiteRT backend, install `pip install "owocr[hayaiocr-litert]"`.
 - WinRT OCR: **Windows 10/11 only** - It can also be used by installing winocr on a Windows virtual machine and running the server there (`winocr_serve`) and specifying the IP address of the Windows VM/machine in the config file. → Terminal: install with `pip install "owocr[winocr]"`, key: `w`
 - [EasyOCR](https://github.com/JaidedAI/EasyOCR) → Terminal: install with `pip install "owocr[easyocr]"`, key: `e`
 - [RapidOCR](https://github.com/RapidAI/RapidOCR) → Terminal: install with `pip install "owocr[rapidocr]"`, key: `r`
@@ -117,6 +118,7 @@ This uses code from/references these people/projects:
 - @bropines for the Bing code ([Github issue](https://github.com/AuroraWright/owocr/issues/10))
 - @ronaldoussoren for helping with the pyobjc VisionKit code
 - [Manga OCR](https://github.com/kha-white/manga-ocr) for inspiring and being the project owocr was originally derived from
+- [Hayai OCR](https://github.com/NopeNopeGuy/hayai-ocr) for the optional Hayai OCR engine integration (Apache-2.0)
 - [Mokuro](https://github.com/kha-white/mokuro) for the comic text detector integration code
 - [ocrmac](https://github.com/straussmaximilian/ocrmac) for the Apple Vision framework API
 - [ccylin2000_lipboard_monitor](https://github.com/vaimalaviya1233/ccylin2000_lipboard_monitor) for the Windows clipboard polling code
@@ -125,3 +127,28 @@ This uses code from/references these people/projects:
 - [Steffo](https://github.com/Steffo99) for all his help in automating packaging/distribution with Github Actions!
 - [kamperemu](https://github.com/kamperemu) for the OBS source implementation!
 - [KamWithK](https://github.com/KamWithK) and [Manhhao](https://github.com/Manhhao) for improving the Wayland mss shim to not require python-dbus and for session persistence
+
+
+### Hayai OCR notes
+
+Hayai OCR is loaded lazily, so installing plain `owocr` does not add the PyTorch/transformers stack. Install the optional extra when you want the engine:
+
+    pip install "owocr[hayaiocr]"
+
+For the LiteRT backend:
+
+    pip install "owocr[hayaiocr-litert]"
+
+The adapter exposes one `Hayai OCR` engine (key: `y`) rather than separate engines for each Hayai model. In `[hayaiocr]` configuration, `hayainova_path`, `hayaiv2_path`, and `hayaiv1_path` select the v2.5-nova, v2, and legacy v1 model repositories/paths respectively. `use_v2 = True` switches to the previous v2 checkpoint, while `use_v1 = True` switches to the legacy v1 model. Hayai's current API documents these model switches, Torch quantization, and the LiteRT backend. citeturn537899search0
+
+The adapter uses Hayai's Python API and preserves Hayai's multiline result as owocr lines. Hayai does not provide image coordinates through this API, so JSON output and two-pass secondary-engine use are not enabled for this engine.
+
+For local LiteRT exports, set `litert_model_path` to the `litert_exports` parent directory. The OwOCR `litert_quant` setting selects the variant: `float` uses the `none` folder, `wi8` uses `wi8_afp32`, and `wi4` uses `wi4`. For example:
+
+    [hayaiocr]
+    backend = litert
+    litert_quant = wi8
+    litert_model_path = C:\Users\yourusername\.config\owocr\hayailitert\litert_exports
+    litert_threads = 0
+
+Hayai OCR 2.3.0 is the current PyPI release used by this integration.
