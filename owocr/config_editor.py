@@ -333,7 +333,7 @@ class ConfigGUI:
                 ('litert_quant', 'dropdown', 'LiteRT quantization', ['float', 'wi8', 'wi4']),
                 ('litert_model_path', 'str', 'Local LiteRT exports directory (contains none/wi8_afp32/wi4; blank = download)', ''),
                 ('litert_threads', 'int', 'LiteRT threads (0 = automatic)', 0),
-                ('compile', 'bool', 'Use torch.compile for the torch backend', True),
+                ('compile', 'bool', 'Use torch.compile for the torch backend', False),
                 ('max_num_patches', 'int', 'Torch NaFlex patch budget (0 = Hayai default)', 0),
             ],
             'easyocr': [
