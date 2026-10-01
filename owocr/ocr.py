@@ -668,7 +668,7 @@ class HayaiOCREngine:
             with GlobalImport():
                 from hayai_ocr import HayaiOcr as HayaiOcrModel
         except ImportError:
-            logger.warning('Dependencies not available, Hayai OCR will not work! Install with "pip install \"owocr[hayaiocr]\""')
+            logger.warning('Dependencies not available, Hayai OCR will not work! Install with "pip install \\"owocr[hayaiocr]\\\""')
             return False
 
         self._hayai_ocr_model = HayaiOcrModel
@@ -682,6 +682,15 @@ class HayaiOCREngine:
         value = str(value).strip()
         return value if value else None
 
+    @staticmethod
+    def _bool_value(config, name, default=False):
+        value = config.get(name, default)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() == 'true'
+        return bool(value)
+
     def __init__(self, config={}):
         if not self._import_dependencies():
             return
@@ -693,7 +702,26 @@ class HayaiOCREngine:
             logger.warning(f'Unknown Hayai OCR backend "{backend}". Use "torch" or "litert".')
             return
 
-        model_path = self._optional_string(config, 'pretrained_model_name_or_path')
+        use_v1 = self._bool_value(config, 'use_v1', False)
+        use_v2 = self._bool_value(config, 'use_v2', False)
+        if use_v1 and use_v2:
+            logger.warning('Hayai OCR cannot use both use_v1 and use_v2; disable one of them.')
+            return
+
+        legacy_model_path = self._optional_string(config, 'pretrained_model_name_or_path')
+        hayainova_path = self._optional_string(config, 'hayainova_path') or 'JustANormalTinkerer/hayai-ocr-v2.5-nova'
+        hayaiv2_path = self._optional_string(config, 'hayaiv2_path') or 'JustANormalTinkerer/hayai-ocr-v2'
+        hayaiv1_path = self._optional_string(config, 'hayaiv1_path') or 'JustANormalTinkerer/hayai-ocr'
+
+        if use_v1:
+            model_path = hayaiv1_path
+        elif use_v2:
+            model_path = hayaiv2_path
+        else:
+            model_path = hayainova_path
+            if legacy_model_path and not self._optional_string(config, 'hayainova_path'):
+                model_path = legacy_model_path
+
         quantize = self._optional_string(config, 'quantize')
         if quantize and quantize.lower() in ('none', 'off', 'false'):
             quantize = None
@@ -709,12 +737,11 @@ class HayaiOCREngine:
         if not isinstance(max_num_patches, int) or max_num_patches <= 0:
             max_num_patches = None
 
-        compile_model = config.get('compile', True)
-        if not isinstance(compile_model, bool):
-            compile_model = str(compile_model).lower() == 'true'
+        compile_model = self._bool_value(config, 'compile', True)
 
         kwargs = {
-            'force_cpu': bool(config.get('force_cpu', False)),
+            'pretrained_model_name_or_path': model_path,
+            'force_cpu': self._bool_value(config, 'force_cpu', False),
             'backend': backend,
             'litert_quant': litert_quant,
             'litert_model_path': litert_model_path,
@@ -723,8 +750,11 @@ class HayaiOCREngine:
             'max_num_patches': max_num_patches,
         }
 
-        if model_path:
-            kwargs['pretrained_model_name_or_path'] = model_path
+        if use_v1:
+            kwargs['use_v1'] = True
+        elif use_v2:
+            kwargs['use_v2'] = True
+
         if quantize:
             kwargs['quantize'] = quantize
 
@@ -734,8 +764,9 @@ class HayaiOCREngine:
             logger.warning(f'Hayai OCR failed to initialize: {e}')
             return
 
+        model_name = 'v1' if use_v1 else ('v2' if use_v2 else 'v2.5-nova')
         self.available = True
-        logger.info(f'Hayai OCR ready ({backend} backend)')
+        logger.info(f'Hayai OCR ready ({model_name}, {backend} backend)')
 
     def __call__(self, img):
         img, is_path = input_to_pil_image(img)
@@ -758,8 +789,8 @@ class HayaiOCREngine:
         result = []
         for line in str(text).splitlines():
             if not line.strip():
-                if result and result[-1] != '\n':
-                    result.append('\n')
+                if result and result[-1] != '\\n':
+                    result.append('\\n')
             else:
                 result.append(line)
 
