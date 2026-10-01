@@ -152,3 +152,13 @@ For local LiteRT exports, set `litert_model_path` to the `litert_exports` parent
     litert_threads = 0
 
 Hayai OCR 2.3.0 is the current PyPI release used by this integration.
+
+### Portable local model paths
+
+The following local engines accept configurable model/resource paths in `owocr_config.ini`, which makes moving an OwOCR setup between Windows installs easier:
+- `mangaocr` / `mangaocrs`: `comictextdetector_path`
+- `screenai`: `screenai_path`
+- `oneocr`: `oneocr_path`
+- `meikiocr`: `meikiocr_path` (Hugging Face cache directory)
+
+Leave these settings blank to retain the existing default locations.
