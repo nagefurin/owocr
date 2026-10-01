@@ -165,6 +165,8 @@ For example:
 
 The local SigLIP2 directory should contain the small processor/config files from `google/siglip2-base-patch16-naflex` (such as `config.json`, `preprocessor_config.json`, and the tokenizer files). The large `model.safetensors` file from the standalone SigLIP2 repository is not required by Hayai because the vision weights are already part of the Hayai checkpoint.
 
+When `hayainova_path` or `hayaiv2_path` points to a local model directory, OwOCR loads Hayai's `configuration_hayai.py` and `modeling_hayai.py` directly from that directory instead of copying them into Transformers' `HF_MODULES_CACHE`. No separate `hayai-modules` cache directory is required for local Hayai models.
+
 ### Portable local model paths
 
 The following local engines accept configurable model/resource paths in `owocr_config.ini`, which makes moving an OwOCR setup between Windows installs easier:
