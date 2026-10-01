@@ -443,8 +443,13 @@ class MangaOcrSegmented:
         if not dependencies_available:
             logger.warning('Dependencies not available, Manga OCR (segmented) will not work!')
         else:
-            comic_text_detector_path = Path.home() / '.cache' / 'manga-ocr'
-            comic_text_detector_file = comic_text_detector_path / 'comictextdetector.pt'
+            configured_detector_path = str(config.get('comictextdetector_path', '')).strip()
+            if configured_detector_path:
+                comic_text_detector_file = Path(os.path.expandvars(os.path.expanduser(configured_detector_path)))
+                comic_text_detector_path = comic_text_detector_file.parent
+            else:
+                comic_text_detector_path = Path.home() / '.cache' / 'manga-ocr'
+                comic_text_detector_file = comic_text_detector_path / 'comictextdetector.pt'
 
             if not comic_text_detector_file.exists():
                 comic_text_detector_path.mkdir(parents=True, exist_ok=True)
@@ -992,7 +997,7 @@ class ChromeScreenAI:
     name = 'screenai'
     readable_name = 'Chrome Screen AI'
     key = 'j'
-    config_entry = None
+    config_entry = 'screenai'
     available = False
     local = True
     manual_language = False
@@ -1020,14 +1025,15 @@ class ChromeScreenAI:
                 return False
             return True
 
-    def __init__(self):
+    def __init__(self, config={}):
         dependencies_available = self._import_dependencies()
 
         if not dependencies_available:
             logger.warning('Dependencies not available, Chrome Screen AI will not work!')
             return
 
-        self.model_dir = Path.home() / '.config' / 'screen_ai' / 'resources'
+        configured_path = str(config.get('screenai_path', '')).strip()
+        self.model_dir = Path(os.path.expandvars(os.path.expanduser(configured_path))) if configured_path else Path.home() / '.config' / 'screen_ai' / 'resources'
 
         if not self._download_files_if_needed():
             return
@@ -2018,6 +2024,7 @@ class OneOCR:
         with GlobalImport():
             try:
                 import oneocr
+                self.oneocr_module = oneocr
             except ImportError:
                 return False
         return True
@@ -2032,9 +2039,12 @@ class OneOCR:
             if not dependencies_available:
                 logger.warning('Dependencies not available, OneOCR will not work!')
             else:
-                if self._copy_files_if_needed():
+                configured_path = str(config.get('oneocr_path', '')).strip()
+                target_path = Path(os.path.expandvars(os.path.expanduser(configured_path))) if configured_path else Path.home() / '.config' / 'oneocr'
+                if self._copy_files_if_needed(target_path):
+                    self.oneocr_module.CONFIG_DIR = str(target_path)
                     try:
-                        self.model = oneocr.OcrEngine()
+                        self.model = self.oneocr_module.OcrEngine()
                     except RuntimeError as e:
                         logger.warning(str(e) + ', OneOCR will not work!')
                     else:
@@ -2048,8 +2058,7 @@ class OneOCR:
             except:
                 logger.warning('Error reading URL from config, OneOCR will not work!')
 
-    def _copy_files_if_needed(self):
-        target_path = Path.home() / '.config' / 'oneocr'
+    def _copy_files_if_needed(self, target_path):
         files_to_copy = ['oneocr.dll', 'oneocr.onemodel', 'onnxruntime.dll']
         copy_needed = False
 
@@ -2580,7 +2589,7 @@ class MeikiOCR:
     name = 'meikiocr'
     readable_name = 'meikiocr'
     key = 'k'
-    config_entry = None
+    config_entry = 'meikiocr'
     available = False
     local = True
     manual_language = False
@@ -2597,8 +2606,10 @@ class MeikiOCR:
         paragraph_bounding_boxes=False
     )
 
-    def _import_dependencies(self):
+    def _import_dependencies(self, model_path=None):
         logger.info('Loading dependencies for meikiocr')
+        if model_path:
+            os.environ['HF_HOME'] = model_path
         with GlobalImport():
             try:
                 from meikiocr import MeikiOCR as MKOCR
@@ -2606,8 +2617,10 @@ class MeikiOCR:
                 return False
         return True
 
-    def __init__(self):
-        dependencies_available = self._import_dependencies()
+    def __init__(self, config={}):
+        configured_path = str(config.get('meikiocr_path', '')).strip()
+        model_path = os.path.expandvars(os.path.expanduser(configured_path)) if configured_path else None
+        dependencies_available = self._import_dependencies(model_path)
 
         if not dependencies_available:
             logger.warning('Dependencies not available, meikiocr will not work!')
