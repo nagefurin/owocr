@@ -727,7 +727,27 @@ class HayaiOCREngine:
             quantize = None
 
         litert_quant = self._optional_string(config, 'litert_quant') or 'wi4'
+        litert_quant_aliases = {
+            'float': 'none',
+            'none': 'none',
+            'wi8': 'wi8_afp32',
+            'wi8_afp32': 'wi8_afp32',
+            'int8': 'wi8_afp32',
+            'wi4': 'wi4',
+            'int4': 'wi4',
+            'dynamic_wi8': 'dynamic_wi8',
+            'dynamic_int8': 'dynamic_wi8',
+            'dynamic_wi4': 'dynamic_wi4',
+            'dynamic_int4': 'dynamic_wi4',
+        }
+        litert_quant = litert_quant_aliases.get(litert_quant.lower())
+        if litert_quant is None:
+            logger.warning('Unknown Hayai OCR LiteRT quantization. Use "float", "wi8", or "wi4".')
+            return
+
         litert_model_path = self._optional_string(config, 'litert_model_path')
+        if backend == 'litert' and litert_model_path:
+            litert_model_path = str(Path(litert_model_path) / litert_quant)
 
         litert_threads = config.get('litert_threads')
         if not isinstance(litert_threads, int) or litert_threads <= 0:
