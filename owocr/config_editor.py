@@ -304,6 +304,10 @@ class ConfigGUI:
             ],
             'oneocr': [
                 ('url', 'str', 'URL for OneOCR service (ignored on Windows)', 'http://aaa.xxx.yyy.zzz:8001'),
+                ('oneocr_path', 'str', 'OneOCR model directory (Windows; blank = default)', ''),
+            ],
+            'screenai': [
+                ('screenai_path', 'str', 'Chrome Screen AI resources directory (blank = default)', ''),
             ],
             'azure': [
                 ('api_key', 'str', 'Azure API key', 'api_key_here'),
@@ -311,7 +315,11 @@ class ConfigGUI:
             ],
             'mangaocr': [
                 ('pretrained_model_name_or_path', 'str', 'Model name or path', 'kha-white/manga-ocr-base'),
+                ('comictextdetector_path', 'str', 'Comic text detector model file (blank = default)', ''),
                 ('force_cpu', 'bool', 'Force CPU usage', False),
+            ],
+            'meikiocr': [
+                ('meikiocr_path', 'str', 'MeikiOCR Hugging Face model cache directory (blank = default)', ''),
             ],
             'hayaiocr': [
                 ('hayainova_path', 'str', 'Hayai v2.5-nova model name or path', 'JustANormalTinkerer/hayai-ocr-v2.5-nova'),
