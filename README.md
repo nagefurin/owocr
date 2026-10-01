@@ -143,4 +143,12 @@ The adapter exposes one `Hayai OCR` engine (key: `y`) rather than separate engin
 
 The adapter uses Hayai's Python API and preserves Hayai's multiline result as owocr lines. Hayai does not provide image coordinates through this API, so JSON output and two-pass secondary-engine use are not enabled for this engine.
 
+For local LiteRT exports, set `litert_model_path` to the `litert_exports` parent directory. The OwOCR `litert_quant` setting selects the variant: `float` uses the `none` folder, `wi8` uses `wi8_afp32`, and `wi4` uses `wi4`. For example:
+
+    [hayaiocr]
+    backend = litert
+    litert_quant = wi8
+    litert_model_path = C:\Users\yourusername\.config\owocr\hayailitert\litert_exports
+    litert_threads = 0
+
 Hayai OCR 2.3.0 is the current PyPI release used by this integration.
