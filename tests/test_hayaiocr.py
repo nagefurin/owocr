@@ -68,3 +68,32 @@ def test_hayai_engine_rejects_unknown_backend(monkeypatch):
     engine = HayaiOCREngine(config={'backend': 'unknown'})
     assert engine.available is False
     assert FakeHayaiOcr.last_kwargs is None
+
+def test_hayai_litert_quant_selects_local_variant(monkeypatch, tmp_path):
+    FakeHayaiOcr = make_fake_hayai(monkeypatch)
+    exports = tmp_path / 'litert_exports'
+    exports.mkdir()
+
+    HayaiOCREngine(config={
+        'backend': 'litert',
+        'litert_quant': 'wi8',
+        'litert_model_path': str(exports),
+    })
+
+    assert FakeHayaiOcr.last_kwargs['litert_quant'] == 'wi8_afp32'
+    assert FakeHayaiOcr.last_kwargs['litert_model_path'] == str(exports / 'wi8_afp32')
+
+
+def test_hayai_litert_float_selects_none_folder(monkeypatch, tmp_path):
+    FakeHayaiOcr = make_fake_hayai(monkeypatch)
+    exports = tmp_path / 'litert_exports'
+    exports.mkdir()
+
+    HayaiOCREngine(config={
+        'backend': 'litert',
+        'litert_quant': 'float',
+        'litert_model_path': str(exports),
+    })
+
+    assert FakeHayaiOcr.last_kwargs['litert_quant'] == 'none'
+    assert FakeHayaiOcr.last_kwargs['litert_model_path'] == str(exports / 'none')
