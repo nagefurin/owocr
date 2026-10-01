@@ -135,6 +135,12 @@ Hayai OCR is loaded lazily, so installing plain `owocr` does not add the PyTorch
 
     pip install "owocr[hayaiocr]"
 
+For the LiteRT backend:
+
+    pip install "owocr[hayaiocr-litert]"
+
+The adapter exposes one `Hayai OCR` engine (key: `y`) rather than separate engines for each Hayai model. In `[hayaiocr]` configuration, `hayainova_path`, `hayaiv2_path`, and `hayaiv1_path` select the v2.5-nova, v2, and legacy v1 model repositories/paths respectively. `use_v2 = True` switches to the previous v2 checkpoint, while `use_v1 = True` switches to the legacy v1 model. Hayai's current API documents these model switches, Torch quantization, and the LiteRT backend. citeturn537899search0
+
 The adapter uses Hayai's Python API and preserves Hayai's multiline result as owocr lines. Hayai does not provide image coordinates through this API, so JSON output and two-pass secondary-engine use are not enabled for this engine.
 
-Hayai OCR 2.3.0 is the current PyPI release used by this integration. Its package metadata requires Python 3.9+; PyPI currently publishes Python classifiers through 3.13, so Python 3.14 may depend on a compatible PyTorch release.
+Hayai OCR 2.3.0 is the current PyPI release used by this integration.
