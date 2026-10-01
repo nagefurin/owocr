@@ -18,8 +18,18 @@ from pathlib import Path
 from PIL import Image
 from loguru import logger
 
-from .ocr import *
 from .config import config
+
+# Configure Hugging Face cache paths before importing any OCR engine dependencies.
+# huggingface_hub reads HF_* environment variables at import time.
+_meiki_config = config.get_engine('meikiocr')
+_meiki_cache = _meiki_config.get('meikiocr_path') if _meiki_config else None
+if _meiki_cache:
+    _meiki_cache = os.path.abspath(os.path.expandvars(os.path.expanduser(str(_meiki_cache))))
+    os.environ['HF_HOME'] = _meiki_cache
+    os.environ['HF_HUB_CACHE'] = os.path.join(_meiki_cache, 'hub')
+
+from .ocr import *
 from .screen_coordinate_picker import get_screen_selection, terminate_selector_if_running
 from .config_editor import main as config_editor_main
 from .log_viewer import main as log_viewer_main
