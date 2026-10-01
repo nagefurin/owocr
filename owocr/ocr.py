@@ -766,6 +766,9 @@ def _hayai_with_local_siglip2(local_path):
             from transformers import Siglip2VisionConfig
 
         auto_processor_cls = hayai_ocr_module.AutoProcessor
+        import inspect
+        auto_processor_descriptor = inspect.getattr_static(auto_processor_cls, 'from_pretrained')
+        siglip_config_descriptor = inspect.getattr_static(Siglip2VisionConfig, 'from_pretrained')
         original_auto_processor = auto_processor_cls.from_pretrained
         original_siglip_config = Siglip2VisionConfig.from_pretrained
 
@@ -786,8 +789,8 @@ def _hayai_with_local_siglip2(local_path):
         try:
             yield
         finally:
-            auto_processor_cls.from_pretrained = classmethod(original_auto_processor)
-            Siglip2VisionConfig.from_pretrained = classmethod(original_siglip_config)
+            auto_processor_cls.from_pretrained = auto_processor_descriptor
+            Siglip2VisionConfig.from_pretrained = siglip_config_descriptor
 
     return _patch()
 
