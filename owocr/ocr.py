@@ -762,7 +762,8 @@ class HayaiOCREngine:
         if not isinstance(max_num_patches, int) or max_num_patches <= 0:
             max_num_patches = None
 
-        compile_model = self._bool_value(config, 'compile', True)
+        compile_model = self._bool_value(config, 'compile', False)
+        logger.info(f'Hayai OCR torch.compile = {compile_model}')
 
         kwargs = {
             'pretrained_model_name_or_path': model_path,
