@@ -190,7 +190,7 @@ class Config:
                 config_folder = os.path.join(os.path.expanduser('~'),'.config')
                 if not os.path.isdir(config_folder):
                     os.makedirs(config_folder)
-                urllib.request.urlretrieve('https://github.com/AuroraWright/owocr/raw/master/owocr_config.ini', self.config_path)
+                urllib.request.urlretrieve('https://github.com/nagefurin/owocr/raw/master/owocr_config.ini', self.config_path)
                 self.downloaded_config = True
             except:
                 pass
