@@ -663,15 +663,96 @@ def _hayai_siglip2_local_path(local_path):
     return path if path.is_dir() else None
 
 
-def _hayai_with_local_siglip2(local_path):
-    """Temporarily redirect Hayai's fixed SigLIP2 repo ID to a local folder.
+def _hayai_load_local_class(class_reference, model_path):
+    """Load Hayai custom model/config code directly from the local model folder.
 
-    HayaiOcr currently hard-codes the SigLIP2 repo in both its processor load
-    and the remote Hayai model's Siglip2VisionConfig.from_pretrained() call.
-    We patch those class methods only while constructing the Hayai model, then
-    restore them. This keeps the rest of OwOCR's Hugging Face cache behavior
-    unchanged and makes SigLIP2 portable when a local path is configured.
+    Transformers normally copies local custom code into HF_MODULES_CACHE when
+    trust_remote_code=True. For configured local Hayai model folders, bypass
+    that mechanism and load the Python modules in-place from the model folder.
     """
+    import importlib
+    import types
+    import hashlib
+
+    model_path = Path(model_path).resolve()
+    if not model_path.is_dir():
+        return None
+
+    try:
+        module_file, class_name = class_reference.split('.', 1)
+    except ValueError:
+        return None
+
+    source_file = model_path / f'{module_file}.py'
+    if not source_file.is_file():
+        return None
+
+    # One package namespace per model folder prevents v1/v2/v2.5 modules
+    # from colliding in sys.modules while still avoiding any file copying.
+    package_suffix = hashlib.sha1(str(model_path).encode('utf-8')).hexdigest()[:12]
+    package_name = f'_owocr_hayai_local_{package_suffix}'
+
+    if package_name not in sys.modules:
+        package = types.ModuleType(package_name)
+        package.__path__ = [str(model_path)]
+        package.__package__ = package_name
+        sys.modules[package_name] = package
+
+    module_name = f'{package_name}.{module_file}'
+    module = sys.modules.get(module_name)
+    if module is None:
+        module = importlib.import_module(module_name)
+
+    return getattr(module, class_name, None)
+
+
+def _hayai_patch_transformers_local_code(model_path):
+    """Patch Transformers' auto loaders to use Hayai local custom code directly."""
+    import transformers.models.auto.auto_factory as auto_factory
+    import transformers.models.auto.configuration_auto as configuration_auto
+
+    original_factory_loader = auto_factory.get_class_from_dynamic_module
+    original_config_loader = configuration_auto.get_class_from_dynamic_module
+
+    def local_or_remote_loader(class_reference, pretrained_model_name_or_path, *args, **kwargs):
+        if isinstance(pretrained_model_name_or_path, (str, os.PathLike)):
+            path = Path(os.path.expandvars(os.path.expanduser(str(pretrained_model_name_or_path))))
+            if path.is_dir() and (
+                class_reference.startswith('modeling_hayai.')
+                or class_reference.startswith('configuration_hayai.')
+            ):
+                loaded = _hayai_load_local_class(class_reference, path)
+                if loaded is not None:
+                    return loaded
+
+        return original_factory_loader(class_reference, pretrained_model_name_or_path, *args, **kwargs)
+
+    def local_or_remote_config_loader(class_reference, pretrained_model_name_or_path, *args, **kwargs):
+        if isinstance(pretrained_model_name_or_path, (str, os.PathLike)):
+            path = Path(os.path.expandvars(os.path.expanduser(str(pretrained_model_name_or_path))))
+            if path.is_dir() and class_reference.startswith('configuration_hayai.'):
+                loaded = _hayai_load_local_class(class_reference, path)
+                if loaded is not None:
+                    return loaded
+
+        return original_config_loader(class_reference, pretrained_model_name_or_path, *args, **kwargs)
+
+    auto_factory.get_class_from_dynamic_module = local_or_remote_loader
+    configuration_auto.get_class_from_dynamic_module = local_or_remote_config_loader
+
+    class _Patch:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            auto_factory.get_class_from_dynamic_module = original_factory_loader
+            configuration_auto.get_class_from_dynamic_module = original_config_loader
+
+    return _Patch()
+
+
+def _hayai_with_local_siglip2(local_path):
+    """Temporarily redirect Hayai's fixed SigLIP2 repo ID to a local folder."""
     import contextlib
 
     path = _hayai_siglip2_local_path(local_path)
@@ -685,8 +766,6 @@ def _hayai_with_local_siglip2(local_path):
             from transformers import Siglip2VisionConfig
 
         auto_processor_cls = hayai_ocr_module.AutoProcessor
-        auto_processor_descriptor = inspect.getattr_static(auto_processor_cls, 'from_pretrained')
-        siglip_config_descriptor = inspect.getattr_static(Siglip2VisionConfig, 'from_pretrained')
         original_auto_processor = auto_processor_cls.from_pretrained
         original_siglip_config = Siglip2VisionConfig.from_pretrained
 
@@ -707,8 +786,8 @@ def _hayai_with_local_siglip2(local_path):
         try:
             yield
         finally:
-            auto_processor_cls.from_pretrained = auto_processor_descriptor
-            Siglip2VisionConfig.from_pretrained = siglip_config_descriptor
+            auto_processor_cls.from_pretrained = classmethod(original_auto_processor)
+            Siglip2VisionConfig.from_pretrained = classmethod(original_siglip_config)
 
     return _patch()
 
@@ -858,7 +937,12 @@ class HayaiOCREngine:
 
         try:
             with _hayai_with_local_siglip2(siglip2_path):
-                self.model = self._hayai_ocr_model(**kwargs)
+                model_path_obj = Path(os.path.expandvars(os.path.expanduser(str(model_path))))
+                if model_path_obj.is_dir():
+                    with _hayai_patch_transformers_local_code(model_path_obj):
+                        self.model = self._hayai_ocr_model(**kwargs)
+                else:
+                    self.model = self._hayai_ocr_model(**kwargs)
         except Exception as e:
             logger.warning(f'Hayai OCR failed to initialize: {e}')
             return
