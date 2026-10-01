@@ -6,6 +6,7 @@ import platform
 import logging
 import json
 import base64
+import inspect
 import urllib
 import inspect
 import time
@@ -646,6 +647,72 @@ class MangaOcr:
         return x
 
 
+
+HAYAI_SIGLIP2_REPO = 'google/siglip2-base-patch16-naflex'
+
+
+def _hayai_siglip2_local_path(local_path):
+    if not local_path:
+        return None
+
+    try:
+        path = Path(os.path.expandvars(os.path.expanduser(str(local_path))))
+    except Exception:
+        return None
+
+    return path if path.is_dir() else None
+
+
+def _hayai_with_local_siglip2(local_path):
+    """Temporarily redirect Hayai's fixed SigLIP2 repo ID to a local folder.
+
+    HayaiOcr currently hard-codes the SigLIP2 repo in both its processor load
+    and the remote Hayai model's Siglip2VisionConfig.from_pretrained() call.
+    We patch those class methods only while constructing the Hayai model, then
+    restore them. This keeps the rest of OwOCR's Hugging Face cache behavior
+    unchanged and makes SigLIP2 portable when a local path is configured.
+    """
+    import contextlib
+
+    path = _hayai_siglip2_local_path(local_path)
+    if path is None:
+        return contextlib.nullcontext()
+
+    @contextlib.contextmanager
+    def _patch():
+        with GlobalImport():
+            import hayai_ocr.ocr as hayai_ocr_module
+            from transformers import Siglip2VisionConfig
+
+        auto_processor_cls = hayai_ocr_module.AutoProcessor
+        auto_processor_descriptor = inspect.getattr_static(auto_processor_cls, 'from_pretrained')
+        siglip_config_descriptor = inspect.getattr_static(Siglip2VisionConfig, 'from_pretrained')
+        original_auto_processor = auto_processor_cls.from_pretrained
+        original_siglip_config = Siglip2VisionConfig.from_pretrained
+
+        def patched_auto_processor(cls, pretrained_model_name_or_path, *args, **kwargs):
+            if pretrained_model_name_or_path == HAYAI_SIGLIP2_REPO:
+                pretrained_model_name_or_path = str(path)
+                kwargs.setdefault('local_files_only', True)
+            return original_auto_processor(pretrained_model_name_or_path, *args, **kwargs)
+
+        def patched_siglip_config(cls, pretrained_model_name_or_path, *args, **kwargs):
+            if pretrained_model_name_or_path == HAYAI_SIGLIP2_REPO:
+                pretrained_model_name_or_path = str(path)
+                kwargs.setdefault('local_files_only', True)
+            return original_siglip_config(pretrained_model_name_or_path, *args, **kwargs)
+
+        auto_processor_cls.from_pretrained = classmethod(patched_auto_processor)
+        Siglip2VisionConfig.from_pretrained = classmethod(patched_siglip_config)
+        try:
+            yield
+        finally:
+            auto_processor_cls.from_pretrained = auto_processor_descriptor
+            Siglip2VisionConfig.from_pretrained = siglip_config_descriptor
+
+    return _patch()
+
+
 class HayaiOCREngine:
     name = 'hayaiocr'
     readable_name = 'Hayai OCR'
@@ -699,6 +766,11 @@ class HayaiOCREngine:
     def __init__(self, config={}):
         if not self._import_dependencies():
             return
+
+        siglip2_path = self._optional_string(config, 'siglip2_path')
+        if siglip2_path and not _hayai_siglip2_local_path(siglip2_path):
+            logger.warning(f'Configured Hayai SigLIP2 path does not exist or is not a directory: {siglip2_path}. Falling back to Hugging Face.')
+            siglip2_path = None
 
         backend = str(config.get('backend', 'torch')).strip().lower()
         if backend in ('tflite', 'lite_rt'):
@@ -785,7 +857,8 @@ class HayaiOCREngine:
             kwargs['quantize'] = quantize
 
         try:
-            self.model = self._hayai_ocr_model(**kwargs)
+            with _hayai_with_local_siglip2(siglip2_path):
+                self.model = self._hayai_ocr_model(**kwargs)
         except Exception as e:
             logger.warning(f'Hayai OCR failed to initialize: {e}')
             return
