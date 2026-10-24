@@ -35,4 +35,19 @@ if __name__ == '__main__':
         import truststore
         multiprocessing.freeze_support()
         truststore.inject_into_ssl()
+        if os.environ.get('OWOCR_PACKAGED_IMPORT_SMOKE_TEST') == '1':
+            import traceback
+            from pathlib import Path
+            test_log = Path(sys.executable).resolve().parent / 'owocr-import-smoke-test.log'
+            try:
+                from transformers import AutoImageProcessor, ViTImageProcessor
+                from manga_ocr import MangaOcr
+                from hayai_ocr import HayaiOcr
+            except Exception:
+                test_log.write_text(traceback.format_exc(), encoding='utf-8')
+                sys.exit(1)
+            else:
+                if test_log.exists():
+                    test_log.unlink()
+                sys.exit(0)
     main()

@@ -26,6 +26,13 @@ hiddenimports += collect_submodules('desktop_notifier')
 # These engines use third-party modules that may be imported dynamically.
 hiddenimports += collect_submodules('manga_ocr')
 hiddenimports += collect_submodules('hayai_ocr')
+# Transformers uses lazy imports; PyInstaller cannot reliably infer the model modules.
+hiddenimports += collect_submodules('transformers.models.auto')
+hiddenimports += collect_submodules('transformers.models.vit')
+hiddenimports += collect_submodules('transformers.models.bert')
+hiddenimports += collect_submodules('transformers.models.siglip2')
+hiddenimports += collect_submodules('transformers.models.vision_encoder_decoder')
+hiddenimports += collect_submodules('transformers.generation')
 
 version_info = VSVersionInfo(
     ffi=FixedFileInfo(

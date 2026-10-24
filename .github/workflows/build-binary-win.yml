@@ -91,6 +91,20 @@ jobs:
         run: |-
           pyinstaller ./owocr_win.spec
       -
+        name: "Smoke-test frozen OCR imports"
+        shell: pwsh
+        run: |-
+          $env:OWOCR_PACKAGED_IMPORT_SMOKE_TEST = "1"
+          & ".\dist\owocr\owocr.exe"
+          $testExitCode = $LASTEXITCODE
+          Remove-Item Env:OWOCR_PACKAGED_IMPORT_SMOKE_TEST
+          if ($testExitCode -ne 0) {
+            if (Test-Path ".\dist\owocr\owocr-import-smoke-test.log") {
+              Get-Content ".\dist\owocr\owocr-import-smoke-test.log"
+            }
+            throw "The packaged executable failed its OCR import smoke test (exit code $testExitCode)."
+          }
+      -
         name: "Create zip"
         shell: pwsh
         run: |-
