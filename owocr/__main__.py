@@ -3,6 +3,9 @@ import sys
 import os
 
 def main():
+    from owocr.paths import configure_portable_caches
+    configure_portable_caches()
+
     if not getattr(sys, 'frozen', False):
         original_stderr_fd = os.dup(sys.stderr.fileno())
         devnull = os.open(os.devnull, os.O_WRONLY)
