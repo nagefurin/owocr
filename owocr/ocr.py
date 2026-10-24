@@ -16,6 +16,10 @@ from urllib.parse import urlparse, parse_qs
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional
 
+from .paths import configure_portable_caches, get_cache_dir, get_config_dir, is_portable_mode
+
+configure_portable_caches()
+
 import numpy as np
 from PIL import Image
 from loguru import logger
@@ -449,7 +453,7 @@ class MangaOcrSegmented:
                 comic_text_detector_file = Path(os.path.expandvars(os.path.expanduser(configured_detector_path)))
                 comic_text_detector_path = comic_text_detector_file.parent
             else:
-                comic_text_detector_path = Path.home() / '.cache' / 'manga-ocr'
+                comic_text_detector_path = get_cache_dir('manga-ocr')
                 comic_text_detector_file = comic_text_detector_path / 'comictextdetector.pt'
 
             if not comic_text_detector_file.exists():
@@ -1021,7 +1025,7 @@ class GoogleVision:
             logger.warning('Dependencies not available, Google Vision will not work!')
         else:
             logger.info(f'Parsing Google credentials')
-            google_credentials_file = Path.home() / '.config' / 'google_vision.json'
+            google_credentials_file = get_config_dir() / 'google_vision.json'
             try:
                 google_credentials = service_account.Credentials.from_service_account_file(google_credentials_file)
                 self.client = vision.ImageAnnotatorClient(credentials=google_credentials)
@@ -1194,7 +1198,7 @@ class ChromeScreenAI:
             return
 
         configured_path = str(config.get('screenai_path', '')).strip()
-        self.model_dir = Path(os.path.expandvars(os.path.expanduser(configured_path))) if configured_path else Path.home() / '.config' / 'screen_ai' / 'resources'
+        self.model_dir = Path(os.path.expandvars(os.path.expanduser(configured_path))) if configured_path else get_config_dir() / 'screen_ai' / 'resources'
 
         if not self._download_files_if_needed():
             return
@@ -2201,7 +2205,7 @@ class OneOCR:
                 logger.warning('Dependencies not available, OneOCR will not work!')
             else:
                 configured_path = str(config.get('oneocr_path', '')).strip()
-                target_path = Path(os.path.expandvars(os.path.expanduser(configured_path))) if configured_path else Path.home() / '.config' / 'oneocr'
+                target_path = Path(os.path.expandvars(os.path.expanduser(configured_path))) if configured_path else get_config_dir() / 'oneocr'
                 if self._copy_files_if_needed(target_path):
                     self.oneocr_module.CONFIG_DIR = str(target_path)
                     try:
@@ -2581,7 +2585,12 @@ class EasyOCR:
             logger.info('Loading EasyOCR model')
             gpu = config.get('gpu', True)
             logging.getLogger('easyocr.easyocr').setLevel(logging.ERROR)
-            self.model = easyocr.Reader([language,'en'], gpu=gpu, verbose=False)
+            reader_kwargs = {'gpu': gpu, 'verbose': False}
+            if is_portable_mode():
+                easyocr_dir = get_config_dir() / 'easyocr'
+                reader_kwargs['model_storage_directory'] = str(easyocr_dir)
+                reader_kwargs['user_network_directory'] = str(easyocr_dir / 'user_network')
+            self.model = easyocr.Reader([language, 'en'], **reader_kwargs)
             self.available = True
             logger.info('EasyOCR ready')
 
@@ -3044,7 +3053,7 @@ class NDLOCRLite:
         if not dependencies_available:
             logger.warning('Dependencies not available, NDLOCR-Lite will not work!')
         else:
-            model_dir = Path.home() / '.config' / 'ndlocr_lite'
+            model_dir = get_config_dir() / 'ndlocr_lite'
             model_dir.mkdir(parents=True, exist_ok=True)
 
             model_files = {
