@@ -10,14 +10,14 @@ import urllib
 import inspect
 import time
 from pathlib import Path
-
-from .paths import configure_portable_caches, get_cache_dir, get_config_dir, is_portable_mode
-
-configure_portable_caches()
 from math import sqrt, sin, cos, atan2, radians
 from urllib.parse import urlparse, parse_qs
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional
+
+from .paths import configure_portable_caches, get_cache_dir, get_config_dir, is_portable_mode
+
+configure_portable_caches()
 
 import numpy as np
 from PIL import Image
@@ -2426,7 +2426,9 @@ class EasyOCR:
             logging.getLogger('easyocr.easyocr').setLevel(logging.ERROR)
             reader_kwargs = {'gpu': gpu, 'verbose': False}
             if is_portable_mode():
-                reader_kwargs['model_storage_directory'] = str(get_config_dir() / 'easyocr')
+                easyocr_dir = get_config_dir() / 'easyocr'
+                reader_kwargs['model_storage_directory'] = str(easyocr_dir)
+                reader_kwargs['user_network_directory'] = str(easyocr_dir / 'user_network')
             self.model = easyocr.Reader([language, 'en'], **reader_kwargs)
             self.available = True
             logger.info('EasyOCR ready')
