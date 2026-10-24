@@ -4,6 +4,8 @@ import argparse
 import textwrap
 import urllib.request
 
+from .paths import get_config_dir
+
 def str2bool(value):
     if value.lower() == 'true':
         return True
@@ -107,7 +109,7 @@ parser.add_argument('--uwu', type=str2bool, nargs='?', const=True, default=argpa
 class Config:
     has_config = False
     downloaded_config = False
-    config_path = os.path.join(os.path.expanduser('~'), '.config', 'owocr_config.ini')
+    config_path = str(get_config_dir() / 'owocr_config.ini')
     __general_config = {}
     __engine_config = {}
     default_config = {
@@ -187,7 +189,7 @@ class Config:
 
         if len(res) == 0:
             try:
-                config_folder = os.path.join(os.path.expanduser('~'),'.config')
+                config_folder = str(get_config_dir())
                 if not os.path.isdir(config_folder):
                     os.makedirs(config_folder)
                 urllib.request.urlretrieve('https://github.com/AuroraWright/owocr/raw/master/owocr_config.ini', self.config_path)
