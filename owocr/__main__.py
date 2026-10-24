@@ -32,9 +32,7 @@ if __name__ == '__main__':
             sys.stdout = open(os.devnull, 'w', encoding='utf-8')
         if sys.stderr is None:
             sys.stderr = open(os.devnull, 'w', encoding='utf-8')
-        import truststore
         multiprocessing.freeze_support()
-        truststore.inject_into_ssl()
         if os.environ.get('OWOCR_PACKAGED_IMPORT_SMOKE_TEST') == '1':
             import traceback
             from pathlib import Path

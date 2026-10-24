@@ -131,7 +131,6 @@ ndlocrlite = [
 [dependency-groups]
 binary = [
     "pyinstaller",
-    "truststore>=0.10.5",
 ]
 
 [project.urls]
