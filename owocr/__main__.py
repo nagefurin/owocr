@@ -33,22 +33,4 @@ if __name__ == '__main__':
         if sys.stderr is None:
             sys.stderr = open(os.devnull, 'w', encoding='utf-8')
         multiprocessing.freeze_support()
-        if os.environ.get('OWOCR_PACKAGED_IMPORT_SMOKE_TEST') == '1':
-            import traceback
-            from pathlib import Path
-            smoke_dir = Path(sys.executable).resolve().parent
-            test_log = smoke_dir / 'owocr-import-smoke-test.log'
-            test_started = smoke_dir / 'owocr-import-smoke-test.started'
-            test_ok = smoke_dir / 'owocr-import-smoke-test.ok'
-            test_started.write_text('started', encoding='utf-8')
-            try:
-                from transformers import AutoImageProcessor, ViTImageProcessor
-                from manga_ocr import MangaOcr
-                from hayai_ocr import HayaiOcr
-            except Exception:
-                test_log.write_text(traceback.format_exc(), encoding='utf-8')
-                sys.exit(1)
-            else:
-                test_ok.write_text('OK', encoding='utf-8')
-                sys.exit(0)
     main()
