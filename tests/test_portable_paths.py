@@ -9,7 +9,7 @@ def configure_packaged_paths(monkeypatch, executable_dir, user_config_dir):
     monkeypatch.setattr(paths.sys, "frozen", True, raising=False)
     monkeypatch.setattr(paths.sys, "executable", str(executable_dir / "owocr.exe"))
     monkeypatch.setattr(paths, "USER_CONFIG_DIR", user_config_dir)
-    return executable_dir / ".config"
+    return executable_dir / "config"
 
 
 def test_fresh_packaged_install_uses_portable_config(monkeypatch, tmp_path):

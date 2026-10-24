@@ -21,7 +21,7 @@ def get_executable_dir():
 def get_portable_config_dir():
     """Return the config directory next to the executable for a packaged build."""
     executable_dir = get_executable_dir()
-    return executable_dir / ".config" if executable_dir is not None else None
+    return executable_dir / "config" if executable_dir is not None else None
 
 
 def _has_entries(directory):
@@ -36,7 +36,7 @@ def get_config_dir():
     """Choose portable data when present, otherwise preserve the user's existing config.
 
     A fresh packaged install starts portable if neither location has data. If the
-    executable-side .config is empty but the user's .config has content, the user
+    executable-side config is empty but the user's .config has content, the user
     directory remains the fallback until the portable directory is populated.
     """
     portable_dir = get_portable_config_dir()
@@ -53,7 +53,7 @@ def get_config_dir():
 
 
 def is_portable_mode():
-    """Return True when a frozen build is using the executable-side .config."""
+    """Return True when a frozen build is using the executable-side config."""
     portable_dir = get_portable_config_dir()
     return portable_dir is not None and get_config_dir() == portable_dir
 

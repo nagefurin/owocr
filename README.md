@@ -27,9 +27,9 @@ Easy to install Windows and macOS packages can be downloaded [here](https://gith
 
 ### Portable Windows ZIP (this fork)
 
-For the Windows ZIP built by this fork, keep the `.config` folder beside `owocr.exe` and the `data` folder. When this portable `.config` contains any files or subfolders, OWOCR uses it for `owocr_config.ini` and its default OCR model/cache directories. Hugging Face, Torch, and EasyOCR model caches are redirected there as well.
+For the Windows ZIP built by this fork, keep the `config` folder beside `owocr.exe` and the `data` folder. When this portable `config` contains any files or subfolders, OWOCR uses it for `owocr_config.ini` and its default OCR model/cache directories. Hugging Face, Torch, and EasyOCR model caches are redirected there as well.
 
-If the portable `.config` is empty, OWOCR reuses the user-level `%USERPROFILE%\.config` folder when that folder already contains data. If neither location has data, a fresh packaged install starts with the executable-side `.config`, so configuration and models can stay with the ZIP when you move it. Python/pip installs continue to use the user-level configuration directory.
+If the portable `config` is empty, OWOCR reuses the user-level `%USERPROFILE%\.config` folder when that folder already contains data. If neither location has data, a fresh packaged install starts with the executable-side `config`, so configuration and models can stay with the ZIP when you move it. Python/pip installs continue to use the user-level configuration directory.
 
 ## Installation (terminal+Python, all operating systems)
 
