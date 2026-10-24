@@ -1,205 +1,53 @@
-%YAML 1.1
----
-
-name: "Release"
+name: "Portable Windows build"
 
 "on":
-  push:
-    tags:
-      - "v*"
-  
   workflow_dispatch:
     inputs:
       tag:
-        description: |-
-          The name of the release to create.
-          For example, "v12.345.67".
+        description: "Tag to use if creating a draft GitHub release."
         type: string
         required: true
-      build-sdist-wheel:
-        description: |-
-          Whether a Python source distribution and a wheel should be built.
+        default: "v1.26.8-portable.1"
+      create-draft-release:
+        description: "Attach the Windows ZIP to a draft GitHub release. Leave off for a build-only test."
         type: boolean
         required: true
-        default: true
-      build-binary-win-x64:
-        description: |-
-          Whether a x64 Windows binary should be built.
-        type: boolean
-        required: true
-        default: true
-      build-binary-mac-intel:
-        description: |-
-          Whether a Intel MacOS binary should be built.
-        type: boolean
-        required: true
-        default: true
-      build-binary-mac-arm64:
-        description: |-
-          Whether a ARM64 MacOS binary should be built.
-        type: boolean
-        required: true
-        default: true
-      publish-github:
-        description: |-
-          Whether a GitHub release should be drafted.
-        type: boolean
-        required: true
-        default: true
-      publish-pypi-test:
-        description: |-
-          Whether the package should be published on Test PyPI.
-        type: boolean
-        required: true
-        default: true
-      publish-pypi-prod:
-        description: |-
-          Whether the package should be published on Production PyPI.
-          Requires a successful publish on Test PyPI first.
-        type: boolean
-        required: true
-        default: true
+        default: false
 
-run-name: "Release ${{ inputs.tag || github.ref_name }}"
+run-name: "Portable Windows build (${{ inputs.tag }})"
 
 jobs:
-  build-sdist-wheel:
-    if: ${{ inputs.build-sdist-wheel || github.event_name == 'push' }}
-    uses: "./.github/workflows/build-sdist-wheel.yml"
-    with:
-      name: "package-sdist-wheel"
-  
   build-binary-win-x64:
-    if: ${{ inputs.build-binary-win-x64 || github.event_name == 'push' }}
+    name: "Build portable Windows x64 ZIP"
     uses: "./.github/workflows/build-binary-win.yml"
     with:
-      name: "windows"
+      name: "windows-portable"
       runner: windows-2025
-  
-  build-binary-mac-intel:
-    if: ${{ inputs.build-binary-mac-intel || github.event_name == 'push' }}
-    uses: "./.github/workflows/build-binary-mac.yml"
-    with:
-      name: "mac_intel"
-      python: "3.12"
-      runner: macos-15-intel
-    secrets: &binary_mac_secrets
-      apple-certificate-base64: "${{ secrets.MACOS_CERTIFICATE }}"
-      apple-certificate-name: "${{ secrets.MACOS_CERTIFICATE_NAME }}"
-      apple-certificate-password: "${{ secrets.MACOS_CERTIFICATE_PWD }}"
-      apple-notarization-username: "${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}"
-      apple-notarization-password: "${{ secrets.MACOS_NOTARIZATION_PWD }}"
-      apple-notarization-team: "${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}"
-  
-  build-binary-mac-arm64:
-    if: ${{ inputs.build-binary-mac-arm64 || github.event_name == 'push' }}
-    uses: "./.github/workflows/build-binary-mac.yml"
-    with:
-      name: "mac_applesilicon"
-      runner: macos-15
-    secrets: *binary_mac_secrets
-  
+
   publish-github:
     name: "Draft GitHub release"
+    if: ${{ inputs.create-draft-release }}
     runs-on: ubuntu-slim
-    
-    # Draft release even if one of the prerequisites failed
-    if: ${{ !cancelled() && ( inputs.publish-github || github.event_name == 'push' ) }}
     needs:
-      - build-sdist-wheel
       - build-binary-win-x64
-      - build-binary-mac-intel
-      - build-binary-mac-arm64
 
     permissions:
-      contents: write  # Required to create a tag.
+      contents: write
 
     steps:
       -
-        # https://github.com/actions/download-artifact/releases/tag/v7.0.0
-        name: "Download all build artifacts"
+        name: "Download Windows build artifact"
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
           path: dist/
       -
-        # https://github.com/ncipollo/release-action/releases/tag/v1.20.0
-        # This action isn't by GitHub, but is one of the officialy recommended successors of https://github.com/actions/download-artifact .
         name: "Draft GitHub release"
         uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b
         with:
-          tag: "${{ inputs.tag || github.ref_name }}"
+          tag: "${{ inputs.tag }}"
           draft: true
-          # If the release hasn't been published yet, update it.
           allowUpdates: true
           updateOnlyUnreleased: true
-          # Attach all build artifacts starting with owocr- .
           artifacts: >-
             dist/*/owocr-*
           replacesArtifacts: true
-  
-  publish-pypi-test:
-    name: "Publish package to Test PyPI"
-    runs-on: ubuntu-latest
-
-    if: ${{ inputs.publish-pypi-test || github.event_name == 'push' }}
-    needs:
-      - build-sdist-wheel
-
-    permissions:
-      id-token: write
-
-    environment:
-      name: "pypi-test"
-      url: "https://test.pypi.org/project/owocr/"
-
-    steps:
-      -
-        # https://github.com/actions/download-artifact/releases/tag/v7.0.0
-        name: "Download build artifacts"
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with:
-          name: "${{ needs.build-sdist-wheel.outputs.artifact-name }}"
-          path: dist/
-      -
-        # https://github.com/pypa/gh-action-pypi-publish/releases/tag/v1.13.0
-        # Note that this action:
-        # - MUST be in the top level workflow, and not in a reusable one
-        # - MUST be run in a ubuntu-latest runner specifically
-        name: "Publish build artifacts"
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
-        with:
-          repository-url: "https://test.pypi.org/legacy/"
-  
-  publish-pypi-prod:
-    name: "Publish package to Production PyPI"
-    runs-on: ubuntu-latest
-
-    if: ${{ inputs.publish-pypi-prod || github.event_name == 'push' }}
-    needs:
-      - build-sdist-wheel
-      - publish-pypi-test
-
-    permissions:
-      id-token: write
-
-    environment:
-      name: "pypi-prod"
-      url: "https://pypi.org/project/owocr/"
-
-    steps:
-      -
-        # https://github.com/actions/download-artifact/releases/tag/v7.0.0
-        name: "Download build artifacts"
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
-        with:
-          name: "${{ needs.build-sdist-wheel.outputs.artifact-name }}"
-          path: dist/
-      -
-        # https://github.com/pypa/gh-action-pypi-publish/releases/tag/v1.13.0
-        # Note that this action:
-        # - MUST be in the top level workflow, and not in a reusable one
-        # - MUST be run in a ubuntu-latest runner specifically
-        name: "Publish build artifacts"
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
-        with:
-          repository-url: "https://upload.pypi.org/legacy/"
