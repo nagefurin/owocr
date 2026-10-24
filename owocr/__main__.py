@@ -32,7 +32,7 @@ if __name__ == '__main__':
             sys.stdout = open(os.devnull, 'w', encoding='utf-8')
         if sys.stderr is None:
             sys.stderr = open(os.devnull, 'w', encoding='utf-8')
-        import pip_system_certs.wrapt_requests
+        import truststore
         multiprocessing.freeze_support()
-        pip_system_certs.wrapt_requests.inject_truststore()
+        truststore.inject_into_ssl()
     main()
