@@ -83,6 +83,7 @@ def configure_portable_caches():
     cache_values = {
         "HF_HOME": huggingface_dir,
         "HF_HUB_CACHE": huggingface_dir / "hub",
+        "HF_ASSETS_CACHE": huggingface_dir / "assets",
         "HUGGINGFACE_HUB_CACHE": huggingface_dir / "hub",
         "TRANSFORMERS_CACHE": huggingface_dir / "transformers",
         "TORCH_HOME": config_dir / "torch",
