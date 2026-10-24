@@ -94,16 +94,33 @@ jobs:
         name: "Smoke-test frozen OCR imports"
         shell: pwsh
         run: |-
+          $smokeDir = (Resolve-Path ".\dist\owocr").Path
+          $started = Join-Path $smokeDir "owocr-import-smoke-test.started"
+          $ok = Join-Path $smokeDir "owocr-import-smoke-test.ok"
+          $errorLog = Join-Path $smokeDir "owocr-import-smoke-test.log"
+          Remove-Item $started, $ok, $errorLog -Force -ErrorAction SilentlyContinue
           $env:OWOCR_PACKAGED_IMPORT_SMOKE_TEST = "1"
-          & ".\dist\owocr\owocr.exe"
-          $testExitCode = $LASTEXITCODE
+          $process = Start-Process -FilePath (Join-Path $smokeDir "owocr.exe") -PassThru -WindowStyle Hidden
           Remove-Item Env:OWOCR_PACKAGED_IMPORT_SMOKE_TEST
-          if ($testExitCode -ne 0) {
-            if (Test-Path ".\dist\owocr\owocr-import-smoke-test.log") {
-              Get-Content ".\dist\owocr\owocr-import-smoke-test.log"
+          $deadline = (Get-Date).AddSeconds(120)
+          while ((Get-Date) -lt $deadline) {
+            if (Test-Path $ok) { break }
+            if (Test-Path $errorLog) {
+              Get-Content $errorLog
+              if (!$process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
+              throw "The packaged executable failed its OCR import smoke test."
             }
-            throw "The packaged executable failed its OCR import smoke test (exit code $testExitCode)."
+            if ($process.HasExited) {
+              throw "The packaged executable exited before writing a smoke-test result (exit code $($process.ExitCode))."
+            }
+            Start-Sleep -Seconds 1
           }
+          if (!(Test-Path $ok)) {
+            if (Test-Path $errorLog) { Get-Content $errorLog }
+            if (!$process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
+            throw "Timed out waiting for the packaged executable smoke-test result."
+          }
+          Write-Host "Packaged OCR import smoke test passed."
       -
         name: "Create zip"
         shell: pwsh
