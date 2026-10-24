@@ -12,6 +12,7 @@ from PyInstaller.utils.win32.versioninfo import (
 
 import sys
 import pathlib
+import importlib.util
 sys.path.insert(0, str(pathlib.Path().absolute()))
 from owocr import __version__, __version_string__
 
@@ -23,6 +24,18 @@ datas += [( 'ndlocr_lite/config', 'ndlocr_lite/config' )]
 hiddenimports = collect_submodules('pynputfix')
 hiddenimports += collect_submodules('pystrayfix')
 hiddenimports += collect_submodules('desktop_notifier')
+
+# On Windows, PyInstaller may not resolve torchvision._C through the package's
+# import hook because importing torchvision can fail before its extension is
+# found. Add the native extension directly from the installed wheel.
+binaries = []
+torchvision_spec = importlib.util.find_spec('torchvision')
+if torchvision_spec and torchvision_spec.origin:
+    torchvision_dir = pathlib.Path(torchvision_spec.origin).parent
+    torchvision_extensions = list(torchvision_dir.glob('_C*.pyd'))
+    if not torchvision_extensions:
+        raise RuntimeError(f'Could not find torchvision native extension in {torchvision_dir}')
+    binaries += [(str(extension), 'torchvision') for extension in torchvision_extensions]
 
 version_info = VSVersionInfo(
     ffi=FixedFileInfo(
@@ -59,7 +72,7 @@ version_info = VSVersionInfo(
 a = Analysis(
     ['owocr/__main__.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
