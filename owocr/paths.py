@@ -72,8 +72,8 @@ def get_cache_dir(name):
 def configure_portable_caches():
     """Redirect common ML model caches beside the executable in portable mode.
 
-    Existing environment-variable overrides are intentionally respected, allowing
-    advanced users to select a shared cache explicitly.
+    In portable mode the executable-side cache paths take priority so models do
+    not silently spill into a machine-wide or user-profile cache.
     """
     if not is_portable_mode():
         return
@@ -91,4 +91,4 @@ def configure_portable_caches():
     }
 
     for key, value in cache_values.items():
-        os.environ.setdefault(key, str(value))
+        os.environ[key] = str(value)
