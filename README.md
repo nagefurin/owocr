@@ -25,6 +25,13 @@ Easy to install Windows and macOS packages can be downloaded [here](https://gith
 - With a left click on the tray icon you can pause/unpause on Windows, from the right click menu (left click on macOS) you can change the engine, pause/unpause, change the screen capture area selection, take a screenshot of the selected screen/window, launch the configuration, and reopen the log viewer if you closed it. The icon will be dimmed to show when owocr is paused.
 - In these versions the engines included by the release build are already available, so you don't need to install anything else for those engines. Hayai OCR is currently an optional Python engine and can be added with `pip install "owocr[hayaiocr]"`. The tray icon is always enabled and can't be turned off.
 
+### Portable Windows ZIP (this fork)
+
+For the Windows ZIP built by this fork, keep the `.config` folder beside `owocr.exe` and the `data` folder. When this portable `.config` contains any files or subfolders, OWOCR uses it for `owocr_config.ini` and its default OCR model/cache directories. Hugging Face, Torch, and EasyOCR model caches are redirected there as well.
+
+If the portable `.config` is empty, OWOCR reuses the user-level `%USERPROFILE%\\.config` folder when that folder already contains data. If neither location has data, a fresh packaged install starts with the executable-side `.config`, so configuration and models can stay with the ZIP when you move it. Python/pip installs continue to use the user-level configuration directory.
+
+
 ## Installation (terminal+Python, all operating systems)
 
 OwOCR has been tested on Python 3.11 to 3.14. It can be installed with `pip install owocr` after you install Python. You also need to have one or more OCR engines, check the list below for instructions. I recommend installing at least Google Lens on any operating system, and OneOCR if you are on Windows. Bing is pre-installed, Apple Vision and Live Text come pre-installed on macOS. Hayai OCR is an optional local engine.
