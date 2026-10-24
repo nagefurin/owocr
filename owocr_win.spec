@@ -23,6 +23,9 @@ datas += [( 'ndlocr_lite/config', 'ndlocr_lite/config' )]
 hiddenimports = collect_submodules('pynputfix')
 hiddenimports += collect_submodules('pystrayfix')
 hiddenimports += collect_submodules('desktop_notifier')
+# These engines use third-party modules that may be imported dynamically.
+hiddenimports += collect_submodules('manga_ocr')
+hiddenimports += collect_submodules('hayai_ocr')
 
 version_info = VSVersionInfo(
     ffi=FixedFileInfo(

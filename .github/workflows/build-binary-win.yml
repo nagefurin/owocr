@@ -76,6 +76,17 @@ jobs:
           pip uninstall -y opencv-python opencv-python-headless
           pip install opencv-python-headless
       -
+        name: "Smoke-test optional OCR engines"
+        shell: pwsh
+        run: |-
+          $extras = "${{ inputs.extras }}"
+          if ($extras.Contains("mangaocr")) {
+            python -c "from manga_ocr import MangaOcr; print('Manga OCR import OK')"
+          }
+          if ($extras.Contains("hayaiocr")) {
+            python -c "from hayai_ocr import HayaiOcr; print('Hayai OCR import OK')"
+          }
+      -
         name: "Build binary"
         run: |-
           pyinstaller ./owocr_win.spec

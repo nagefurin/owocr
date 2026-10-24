@@ -430,7 +430,8 @@ class MangaOcrSegmented:
             with GlobalImport():
                 try:
                     from manga_ocr import MangaOcr as MOCR
-                except ImportError:
+                except ImportError as e:
+                    logger.warning(f'Manga OCR dependency import failed: {e}')
                     return False
         with GlobalImport():
             try:
@@ -623,7 +624,8 @@ class MangaOcr:
             with GlobalImport():
                 try:
                     from manga_ocr import MangaOcr as MOCR
-                except ImportError:
+                except ImportError as e:
+                    logger.warning(f'Manga OCR dependency import failed: {e}')
                     return False
         return True
 
@@ -825,8 +827,8 @@ class HayaiOCREngine:
         try:
             with GlobalImport():
                 from hayai_ocr import HayaiOcr as HayaiOcrModel
-        except ImportError:
-            logger.warning('Dependencies not available, Hayai OCR will not work! Install with "pip install \\"owocr[hayaiocr]\\\""')
+        except ImportError as e:
+            logger.warning(f'Hayai OCR dependency import failed: {e}. Install with "pip install \\"owocr[hayaiocr]\\""')
             return False
 
         self._hayai_ocr_model = HayaiOcrModel
