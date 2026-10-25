@@ -80,12 +80,14 @@ jobs:
         run: |-
           pyinstaller ./owocr_win.spec
       -
-        name: "Create zip"
+        name: "Prepare portable folder"
         shell: pwsh
         run: |-
-          mv dist zip
-          New-Item -ItemType Directory -Path dist
-          Compress-Archive -Path zip/owocr -DestinationPath dist/owocr-${{ inputs.name }}.zip
+          $portableDir = "dist/owocr"
+          if (!(Test-Path (Join-Path $portableDir "owocr.exe"))) {
+            throw "PyInstaller output is missing dist/owocr/owocr.exe"
+          }
+          Write-Host "The uploaded artifact will contain the portable files directly, with no nested ZIP."
       - 
         # https://github.com/actions/upload-artifact/releases/tag/v6.0.0
         id: upload
@@ -93,7 +95,8 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: &artifact_name "${{ inputs.name }}"
-          path: dist/owocr-${{ inputs.name }}.zip
+          path: dist/owocr/
+          compression-level: 9
       
     outputs:
       artifact-name: *artifact_name

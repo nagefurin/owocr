@@ -41,6 +41,24 @@ jobs:
         with:
           path: dist/
       -
+        name: "Create single-download ZIP"
+        shell: pwsh
+        run: |-
+          $portableDir = "dist/windows-portable"
+          $releaseZip = "dist/owocr-windows-portable.zip"
+          $limitBytes = 450000000
+
+          if (!(Test-Path (Join-Path $portableDir "owocr.exe"))) {
+            throw "Downloaded artifact is missing owocr.exe in $portableDir"
+          }
+
+          Compress-Archive -Path "$portableDir/*" -DestinationPath $releaseZip -CompressionLevel Optimal
+          $zipSize = (Get-Item $releaseZip).Length
+          Write-Host ("Release ZIP size: {0:N0} bytes" -f $zipSize)
+          if ($zipSize -ge $limitBytes) {
+            throw "Portable release ZIP must be under 450 MB; actual size is $zipSize bytes."
+          }
+      -
         name: "Draft GitHub release"
         uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b
         with:
@@ -48,6 +66,5 @@ jobs:
           draft: true
           allowUpdates: true
           updateOnlyUnreleased: true
-          artifacts: >-
-            dist/*/owocr-*
+          artifacts: >-\n            dist/owocr-*
           replacesArtifacts: true
