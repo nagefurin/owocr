@@ -12,6 +12,15 @@ def test_expand_path_variables_supports_windows_percent_syntax(monkeypatch, tmp_
     assert expanded == str(tmp_path / "Pictures" / "OCR")
 
 
+def test_expand_userprofile_falls_back_to_home_when_environment_variable_is_missing(monkeypatch, tmp_path):
+    monkeypatch.delenv("USERPROFILE", raising=False)
+    monkeypatch.setattr(paths.Path, "home", classmethod(lambda cls: tmp_path))
+
+    expanded = paths.expand_path_variables("%USERPROFILE%/Pictures/OCR")
+
+    assert expanded == str(tmp_path / "Pictures" / "OCR")
+
+
 def configure_packaged_paths(monkeypatch, executable_dir, user_config_dir):
     executable_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(paths.sys, "frozen", True, raising=False)

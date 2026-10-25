@@ -13,14 +13,23 @@ def expand_path_variables(value):
     """Expand environment variables in a configured path.
 
     Support the native environment-variable syntax and Windows-style %NAME%
-    references, even when a config file is inspected on a non-Windows host.
+    references. If USERPROFILE is missing from the environment, use the home
+    directory as its fallback.
     """
-    value = os.path.expandvars(os.fspath(value))
-    return re.sub(
-        r"%([^%]+)%",
-        lambda match: os.environ.get(match.group(1), match.group(0)),
-        value,
-    )
+    def replace_percent_variable(match):
+        name = match.group(1)
+        replacement = os.environ.get(name)
+        if replacement is None:
+            replacement = next(
+                (item for key, item in os.environ.items() if key.casefold() == name.casefold()),
+                None,
+            )
+        if replacement is None and name.casefold() == "userprofile":
+            replacement = str(Path.home())
+        return replacement if replacement is not None else match.group(0)
+
+    value = re.sub(r"%([^%]+)%", replace_percent_variable, os.fspath(value))
+    return os.path.expandvars(value)
 
 
 def get_executable_dir():

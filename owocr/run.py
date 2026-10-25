@@ -19,6 +19,7 @@ from PIL import Image
 from loguru import logger
 
 from .config import config
+from .paths import expand_path_variables
 
 # Configure Hugging Face cache paths before importing any OCR engine dependencies.
 # huggingface_hub reads HF_* environment variables at import time.
@@ -3131,8 +3132,8 @@ def run():
     global image_queue
     global coordinate_selector_event
     non_path_inputs = ('screencapture', 'clipboard', 'websocket', 'unixsocket', 'obs')
-    read_from = config.get_general('read_from')
-    read_from_secondary = config.get_general('read_from_secondary')
+    read_from = expand_path_variables(config.get_general('read_from') or '')
+    read_from_secondary = expand_path_variables(config.get_general('read_from_secondary') or '')
     read_from_path = None
     read_from_readable = []
     write_to = config.get_general('write_to')
@@ -3227,7 +3228,11 @@ def run():
         delete_images = config.get_general('delete_images')
         read_from_path = Path(read_from) if read_from not in non_path_inputs else Path(read_from_secondary)
         if not read_from_path.is_dir():
-            exit_with_error('read_from and read_from_secondary must be either "websocket", "unixsocket", "clipboard", "screencapture", or a path to a directory')
+            exit_with_error(
+                f'read_from and read_from_secondary must be either "websocket", "unixsocket", '
+                f'"clipboard", "screencapture", or a path to a directory. '
+                f'Resolved directory path: "{read_from_path}"'
+            )
         directory_watcher_thread = DirectoryWatcher(read_from_path)
         directory_watcher_thread.start()
         read_from_readable.append(f'directory {read_from_path}')
