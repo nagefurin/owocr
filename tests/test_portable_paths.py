@@ -4,6 +4,14 @@ import sys
 from owocr import paths
 
 
+def test_expand_path_variables_supports_windows_percent_syntax(monkeypatch, tmp_path):
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+
+    expanded = paths.expand_path_variables("%USERPROFILE%/Pictures/OCR")
+
+    assert expanded == str(tmp_path / "Pictures" / "OCR")
+
+
 def configure_packaged_paths(monkeypatch, executable_dir, user_config_dir):
     executable_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(paths.sys, "frozen", True, raising=False)

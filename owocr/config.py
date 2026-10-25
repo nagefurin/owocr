@@ -4,7 +4,7 @@ import argparse
 import textwrap
 import urllib.request
 
-from .paths import get_config_dir
+from .paths import expand_path_variables, get_config_dir
 
 def str2bool(value):
     if value.lower() == 'true':
@@ -184,7 +184,7 @@ class Config:
     def __init__(self):
         args = parser.parse_args()
         self.__provided_cli_args = vars(args)
-        config = configparser.ConfigParser()
+        config = configparser.ConfigParser(interpolation=None)
         res = config.read(self.config_path, encoding='utf-8')
 
         if len(res) == 0:
@@ -210,14 +210,16 @@ class Config:
 
     def get_general(self, value):
         if self.__provided_cli_args.get(value, None) is not None:
-            return self.__provided_cli_args[value]
-        try:
-            return self.__general_config[value]
-        except KeyError:
-            if value in self.default_config:
-                return self.default_config[value]
-            else:
-                return None
+            result = self.__provided_cli_args[value]
+        else:
+            try:
+                result = self.__general_config[value]
+            except KeyError:
+                result = self.default_config.get(value)
+
+        if value in ("read_from", "read_from_secondary") and isinstance(result, str):
+            result = expand_path_variables(result)
+        return result
 
     def get_engine(self, value):
         try:

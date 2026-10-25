@@ -1,11 +1,26 @@
 """Path helpers for normal and portable OWOCR installations."""
 
 import os
+import re
 import sys
 from pathlib import Path
 
 
 USER_CONFIG_DIR = Path.home() / ".config"
+
+
+def expand_path_variables(value):
+    """Expand environment variables in a configured path.
+
+    Support the native environment-variable syntax and Windows-style %NAME%
+    references, even when a config file is inspected on a non-Windows host.
+    """
+    value = os.path.expandvars(os.fspath(value))
+    return re.sub(
+        r"%([^%]+)%",
+        lambda match: os.environ.get(match.group(1), match.group(0)),
+        value,
+    )
 
 
 def get_executable_dir():

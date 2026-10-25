@@ -934,7 +934,7 @@ class ConfigGUI:
             return
 
         try:
-            self.config = configparser.ConfigParser()
+            self.config = configparser.ConfigParser(interpolation=None)
             self.config.read(self.config_path, encoding='utf-8')
 
             if 'general' in self.config:
