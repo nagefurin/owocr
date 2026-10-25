@@ -66,5 +66,6 @@ jobs:
           draft: true
           allowUpdates: true
           updateOnlyUnreleased: true
-          artifacts: >-\n            dist/owocr-*
+          artifacts: >-
+            dist/owocr-*
           replacesArtifacts: true
