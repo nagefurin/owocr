@@ -73,6 +73,7 @@ jobs:
         name: "Setup Python dependencies"
         run: |-
           pip install --group="binary" .${{ inputs.extras }}
+          pip install ".[mangaocrcpt]"
           pip uninstall -y opencv-python opencv-python-headless
           pip install opencv-python-headless
       -

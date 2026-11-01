@@ -322,6 +322,8 @@ class ConfigGUI:
                 ('pretrained_model_name_or_path', 'str', 'Hugging Face model ID or local model directory', 'muscgab/manga-ocr-base-CPT-flex'),
                 ('backend', 'dropdown', 'Inference backend', ['auto', 'plain']),
                 ('decoder', 'dropdown', 'Decoder precision (fp16 only affects CUDA)', ['fp32', 'fp16']),
+                ('portable_model', 'bool', 'Store downloaded weights inside the owocr folder for portability', True),
+                ('portable_model_path', 'str', 'Portable model directory (relative to owocr folder, or absolute)', 'models/manga-ocr-base-CPT-flex'),
                 ('force_cpu', 'bool', 'Force CPU usage', False),
             ],
             'meikiocr': [

@@ -137,11 +137,13 @@ Manga OCR CPT-flex is loaded lazily. Install the optional extra when using the P
 
     pip install "owocr[mangaocrcpt]"
 
-The first recognition downloads approximately 444 MB of weights from Hugging Face. Set `pretrained_model_name_or_path` under `[mangaocrcpt]` to a local model directory to avoid the download. The default is `muscgab/manga-ocr-base-CPT-flex`. The decoder defaults to fp32 to reproduce the benchmarked outputs; the plain PyTorch backend can be selected in configuration.
+The first recognition downloads approximately 444 MB of weights from Hugging Face. Portable model storage is enabled by default: the weights are placed in `models/manga-ocr-base-CPT-flex` beside the executable, and the config editor exposes both a portability toggle and a custom model directory. Relative paths are resolved against the executable folder (or, for a normal Python install, the config folder). Set `portable_model = False` to use the standard Hugging Face user cache instead. You can also set `pretrained_model_name_or_path` to an existing local model directory. The default model is `muscgab/manga-ocr-base-CPT-flex`; the decoder defaults to fp32 to reproduce the benchmarked outputs.
 
 This is a recognizer, not a text detector: it expects cropped text regions and does not return coordinates, so JSON output and two-pass secondary-engine use are not enabled. It supports Japanese and up to 64 characters per crop; results are weaker on boxes longer than 32 characters, handwriting, stylised lettering and sound effects. Use the existing segmented Manga OCR engine for full manga pages or panels containing multiple text areas.
 
 On JMangaBench_Read v1.3.3, CPT-flex ranks first among released OCR models (97.48 composite, 1.50% CER, 91.71% exact match; RTX 2080 Ti). This is a benchmark result, not a guarantee for every manga source; the benchmark authors also developed the model and used some benchmark data during development.
+
+The portable executable keeps its editable settings in `config/owocr_config.ini` next to the executable. For compatibility, an existing `~/.config/owocr_config.ini` is still used when the portable config file is absent. The PyInstaller build includes the CPT inference package and its dependencies; the model weights are deliberately downloaded on first use rather than embedded in the executable.
 
 The inference package code is Apache-2.0. The model weights are CC BY-NC-SA 4.0; commercial use requires separate permission. Consult the upstream license and notice before redistributing or using the weights.
 

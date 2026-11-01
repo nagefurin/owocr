@@ -6,6 +6,9 @@ from PIL import Image
 from owocr.ocr import MangaOcrCPTEngine
 
 
+REQUIRED_MODEL_FILES = ("model.safetensors", "config.json", "nar_vocabulary_6817.json")
+
+
 def make_fake_cpt(monkeypatch):
     fake = ModuleType("manga_ocr_cpt")
     captured = {}
@@ -23,39 +26,74 @@ def make_fake_cpt(monkeypatch):
     return captured
 
 
-def test_manga_ocr_cpt_engine_defaults_and_output(monkeypatch):
+def install_fake_hub(monkeypatch):
+    fake = ModuleType("huggingface_hub")
+    captured = {}
+
+    def snapshot_download(**kwargs):
+        captured.update(kwargs)
+        target = __import__("pathlib").Path(kwargs["local_dir"])
+        target.mkdir(parents=True, exist_ok=True)
+        for filename in REQUIRED_MODEL_FILES:
+            (target / filename).write_bytes(b"test")
+        return str(target)
+
+    fake.snapshot_download = snapshot_download
+    monkeypatch.setitem(sys.modules, "huggingface_hub", fake)
+    return captured
+
+
+def test_manga_ocr_cpt_engine_defaults_to_portable_model_folder(monkeypatch, tmp_path):
     captured = make_fake_cpt(monkeypatch)
+    hub = install_fake_hub(monkeypatch)
+    monkeypatch.setattr(MangaOcrCPTEngine, "_portable_root", lambda self: tmp_path)
+
     engine = MangaOcrCPTEngine()
     assert engine.available is True
-    assert "kwargs" not in captured  # model loading is lazy
+    assert engine.portable_model is True
 
     ok, result = engine(Image.new("RGB", (80, 120), "white"))
+
+    expected_dir = tmp_path / "models" / "manga-ocr-base-CPT-flex"
     assert ok is True
     assert result == ["テストの文章"]
-    assert captured["kwargs"]["model"] == "muscgab/manga-ocr-base-CPT-flex"
-    assert captured["kwargs"]["device"] is None
-    assert captured["kwargs"]["backend"] == "auto"
-    assert captured["kwargs"]["decoder"] == "fp32"
+    assert hub["repo_id"] == "muscgab/manga-ocr-base-CPT-flex"
+    assert hub["local_dir"] == str(expected_dir.resolve())
+    assert set(hub["allow_patterns"]) == set(REQUIRED_MODEL_FILES)
+    assert captured["kwargs"]["model"] == str(expected_dir.resolve())
+    assert (expected_dir / ".owocr-model-id").read_text(encoding="utf-8") == "muscgab/manga-ocr-base-CPT-flex"
 
 
-def test_manga_ocr_cpt_engine_respects_local_model_and_cpu(monkeypatch, tmp_path):
+def test_manga_ocr_cpt_engine_uses_existing_local_model(monkeypatch, tmp_path):
     captured = make_fake_cpt(monkeypatch)
-    local_model = tmp_path / "manga-ocr-base-CPT-flex"
+    local_model = tmp_path / "local-cpt-model"
+    local_model.mkdir()
+    for filename in REQUIRED_MODEL_FILES:
+        (local_model / filename).write_bytes(b"test")
+
     engine = MangaOcrCPTEngine(config={
         "pretrained_model_name_or_path": str(local_model),
         "backend": "plain", "decoder": "fp16", "force_cpu": True,
     })
     ok, result = engine(Image.new("RGB", (80, 120), "white"))
+
     assert engine.available is True
     assert ok is True
-    assert captured["kwargs"]["model"] == str(local_model)
+    assert captured["kwargs"]["model"] == str(local_model.resolve())
     assert captured["kwargs"]["device"] == "cpu"
     assert captured["kwargs"]["backend"] == "plain"
     assert captured["kwargs"]["decoder"] == "fp16"
 
 
-def test_manga_ocr_cpt_engine_rejects_invalid_backend(monkeypatch):
+def test_manga_ocr_cpt_engine_can_use_standard_huggingface_cache(monkeypatch):
     captured = make_fake_cpt(monkeypatch)
+    engine = MangaOcrCPTEngine(config={"portable_model": False})
+
+    assert engine._resolve_model_path() == "muscgab/manga-ocr-base-CPT-flex"
+    assert engine.portable_model is False
+
+
+def test_manga_ocr_cpt_engine_rejects_invalid_backend(monkeypatch):
+    make_fake_cpt(monkeypatch)
     engine = MangaOcrCPTEngine(config={"backend": "unknown"})
     assert engine.available is False
-    assert "kwargs" not in captured

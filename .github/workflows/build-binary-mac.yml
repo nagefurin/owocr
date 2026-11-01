@@ -111,6 +111,7 @@ jobs:
         run: |-
           source venv/bin/activate
           pip install --group="binary" .${{ inputs.extras }}
+          pip install ".[mangaocrcpt]"
           pip uninstall -y opencv-python opencv-python-headless
       -
         name: "Pin specific Python dependencies for Intel Macs"

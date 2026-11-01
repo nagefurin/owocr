@@ -8,6 +8,7 @@ datas += collect_data_files('manga_ocr_cpt', include_py_files=True)
 datas += [( 'third_party_licenses/manga-ocr-CPT-LICENSE', 'third_party_licenses' )]
 datas += [( 'third_party_licenses/manga-ocr-CPT-NOTICE.md', 'third_party_licenses' )]
 datas += [( 'owocr/data', 'owocr/data' )]
+datas += [( 'owocr_config.ini', '.' )]
 datas += [( 'ndlocr_lite/config', 'ndlocr_lite/config' )]
 hiddenimports = collect_submodules('pynputfix')
 hiddenimports += collect_submodules('manga_ocr_cpt')

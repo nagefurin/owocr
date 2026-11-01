@@ -691,6 +691,10 @@ class MangaOcrCPTEngine:
         self.backend = str(config.get('backend', 'auto')).strip().lower()
         self.decoder = str(config.get('decoder', 'fp32')).strip().lower()
         self.force_cpu = self._bool_value(config, 'force_cpu', False)
+        self.portable_model = self._bool_value(config, 'portable_model', True)
+        self.portable_model_path = str(config.get(
+            'portable_model_path', 'models/manga-ocr-base-CPT-flex'
+        )).strip() or 'models/manga-ocr-base-CPT-flex'
         if self.backend not in ('auto', 'plain'):
             logger.warning(f'Unknown Manga OCR CPT-flex backend "{self.backend}". Use "auto" or "plain".')
             return
@@ -702,6 +706,84 @@ class MangaOcrCPTEngine:
         self.model = None
         self.available = True
         logger.info('Manga OCR CPT-flex available; model loading is deferred until first use')
+
+    def _portable_root(self):
+        if getattr(sys, 'frozen', False):
+            return Path(sys.executable).resolve().parent
+        try:
+            from .config import config as app_config
+            return Path(app_config.config_path).expanduser().resolve().parent
+        except Exception:
+            return Path.cwd()
+
+    @staticmethod
+    def _is_path_like_model_reference(value):
+        return (
+            os.path.isabs(value)
+            or value.startswith(('.', '~'))
+            or '\\\\' in value
+            or bool(re.match(r'^[A-Za-z]:', value))
+        )
+
+    @staticmethod
+    def _has_cpt_model_files(path):
+        required = ('model.safetensors', 'config.json', 'nar_vocabulary_6817.json')
+        return all((path / name).is_file() for name in required)
+
+    def _resolve_model_path(self):
+        # A user-supplied local model folder always takes precedence.
+        model_reference = os.path.expandvars(os.path.expanduser(self.model_path))
+        local_model = Path(model_reference)
+        if local_model.is_dir():
+            if self._has_cpt_model_files(local_model):
+                return str(local_model.resolve())
+            raise FileNotFoundError(
+                f'Manga OCR CPT-flex model directory is missing one or more required files: {local_model}'
+            )
+
+        # When portability is disabled, let upstream use the normal Hugging Face cache.
+        if not self.portable_model:
+            return self.model_path
+
+        # A path-looking value that does not exist is a configuration error, not a Hub repo ID.
+        if self._is_path_like_model_reference(model_reference):
+            raise FileNotFoundError(f'Manga OCR CPT-flex local model path does not exist: {local_model}')
+
+        portable_dir = Path(os.path.expandvars(os.path.expanduser(self.portable_model_path)))
+        if not portable_dir.is_absolute():
+            portable_dir = self._portable_root() / portable_dir
+        portable_dir = portable_dir.resolve()
+        portable_dir.mkdir(parents=True, exist_ok=True)
+
+        marker = portable_dir / '.owocr-model-id'
+        if marker.is_file():
+            cached_repo = marker.read_text(encoding='utf-8').strip()
+            if cached_repo and cached_repo != self.model_path:
+                raise RuntimeError(
+                    f'The portable model folder already belongs to {cached_repo!r}. '
+                    f'Choose another portable_model_path or remove {portable_dir} before downloading {self.model_path!r}.'
+                )
+
+        if not self._has_cpt_model_files(portable_dir):
+            logger.info(f'Downloading Manga OCR CPT-flex weights into portable folder: {portable_dir}')
+            try:
+                from huggingface_hub import snapshot_download
+            except ImportError as e:
+                raise ImportError('huggingface_hub is required to download Manga OCR CPT-flex weights.') from e
+
+            snapshot_download(
+                repo_id=self.model_path,
+                local_dir=str(portable_dir),
+                allow_patterns=['model.safetensors', 'config.json', 'nar_vocabulary_6817.json']
+            )
+
+        if not self._has_cpt_model_files(portable_dir):
+            raise FileNotFoundError(
+                f'The download did not produce all required Manga OCR CPT-flex files in {portable_dir}'
+            )
+
+        marker.write_text(self.model_path, encoding='utf-8')
+        return str(portable_dir)
 
     def _load_model(self):
         device = 'cpu' if self.force_cpu else None
@@ -716,8 +798,9 @@ class MangaOcrCPTEngine:
                 pass
         try:
             logger.info(f'Loading Manga OCR CPT-flex model: {self.model_path}')
+            resolved_model_path = self._resolve_model_path()
             self.model = self.model_class(
-                model=self.model_path, device=device,
+                model=resolved_model_path, device=device,
                 backend=self.backend, decoder=self.decoder
             )
             return True

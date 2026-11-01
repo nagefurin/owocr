@@ -1,4 +1,6 @@
 import os
+import sys
+import shutil
 import configparser
 import argparse
 import textwrap
@@ -107,7 +109,12 @@ parser.add_argument('--uwu', type=str2bool, nargs='?', const=True, default=argpa
 class Config:
     has_config = False
     downloaded_config = False
-    config_path = os.path.join(os.path.expanduser('~'), '.config', 'owocr_config.ini')
+    user_config_path = os.path.join(os.path.expanduser('~'), '.config', 'owocr_config.ini')
+    portable_config_path = os.path.join(os.path.dirname(os.path.abspath(sys.executable)), 'config', 'owocr_config.ini')
+    if getattr(sys, 'frozen', False):
+        config_path = portable_config_path if os.path.isfile(portable_config_path) else user_config_path if os.path.isfile(user_config_path) else portable_config_path
+    else:
+        config_path = user_config_path
     __general_config = {}
     __engine_config = {}
     default_config = {
@@ -187,14 +194,37 @@ class Config:
 
         if len(res) == 0:
             try:
-                config_folder = os.path.join(os.path.expanduser('~'),'.config')
-                if not os.path.isdir(config_folder):
-                    os.makedirs(config_folder)
-                urllib.request.urlretrieve('https://github.com/AuroraWright/owocr/raw/master/owocr_config.ini', self.config_path)
+                config_folder = os.path.dirname(self.config_path)
+                os.makedirs(config_folder, exist_ok=True)
+
+                bundled_template = os.path.join(getattr(sys, '_MEIPASS', ''), 'owocr_config.ini')
+                if getattr(sys, 'frozen', False) and os.path.isfile(bundled_template):
+                    shutil.copy2(bundled_template, self.config_path)
+                else:
+                    urllib.request.urlretrieve('https://github.com/AuroraWright/owocr/raw/master/owocr_config.ini', self.config_path)
+
                 self.downloaded_config = True
-            except:
-                pass
-            return
+                res = config.read(self.config_path, encoding='utf-8')
+            except Exception:
+                # If the portable folder is read-only, fall back to the legacy
+                # per-user config location rather than preventing startup.
+                if getattr(sys, 'frozen', False) and self.config_path != self.user_config_path:
+                    try:
+                        os.makedirs(os.path.dirname(self.user_config_path), exist_ok=True)
+                        res = config.read(self.user_config_path, encoding='utf-8')
+                        if not res:
+                            urllib.request.urlretrieve(
+                                'https://github.com/AuroraWright/owocr/raw/master/owocr_config.ini',
+                                self.user_config_path
+                            )
+                            res = config.read(self.user_config_path, encoding='utf-8')
+                        if res:
+                            self.config_path = self.user_config_path
+                    except Exception:
+                        pass
+
+            if len(res) == 0:
+                return
 
         self.has_config = True
         for key in config:
