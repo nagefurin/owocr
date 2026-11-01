@@ -681,7 +681,7 @@ class MangaOcrCPTEngine:
         except ImportError:
             logger.warning(
                 'Dependencies not available, Manga OCR CPT-flex will not work! '
-                'Install with "pip install \\"owocr[mangaocrcpt]\\"" .'
+                'Install with pip install "owocr[mangaocrcpt]".'
             )
             return False
         self.model_class = MangaOcrCPTModel
@@ -709,10 +709,10 @@ class MangaOcrCPTEngine:
         self.decoder = str(config.get('decoder', 'fp32')).strip().lower()
         self.force_cpu = self._bool_value(config, 'force_cpu', False)
 
-        if self.backend not in ('auto', 'plain'):
+        if self.backend not in ('auto', 'cuda', 'plain'):
             logger.warning(
                 f'Unknown Manga OCR CPT-flex backend "{self.backend}". '
-                'Use "auto" or "plain".'
+                'Use "auto", "cuda", or "plain".'
             )
             return
         if self.decoder not in ('fp32', 'fp16'):
