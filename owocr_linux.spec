@@ -4,9 +4,13 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 datas = collect_data_files('rapidocr', include_py_files=False)
 datas += collect_data_files('unidic_lite', include_py_files=False)
 datas += collect_data_files('manga_ocr', include_py_files=True)
+datas += collect_data_files('manga_ocr_cpt', include_py_files=True)
+datas += [( 'third_party_licenses/manga-ocr-CPT-LICENSE', 'third_party_licenses' )]
+datas += [( 'third_party_licenses/manga-ocr-CPT-NOTICE.md', 'third_party_licenses' )]
 datas += [( 'owocr/data', 'owocr/data' )]
 datas += [( 'ndlocr_lite/config', 'ndlocr_lite/config' )]
 hiddenimports = collect_submodules('pynputfix')
+hiddenimports += collect_submodules('manga_ocr_cpt')
 hiddenimports += collect_submodules('pystrayfix')
 hiddenimports += collect_submodules('desktop_notifier')
 hiddenimports += collect_submodules('PIL')

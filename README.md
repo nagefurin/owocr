@@ -23,7 +23,7 @@ Easy to install Windows and macOS packages can be downloaded [here](https://gith
 - A "Log Viewer" window will shop up, showing information messages. A tray icon in the macOS menu bar/Windows task bar will show up. You can close the log viewer if you want.
 - By default owocr monitors the clipboard for images and outputs recognized text back to the clipboard. You can change this from the configuration, accessible from the tray icon.
 - With a left click on the tray icon you can pause/unpause on Windows, from the right click menu (left click on macOS) you can change the engine, pause/unpause, change the screen capture area selection, take a screenshot of the selected screen/window, launch the configuration, and reopen the log viewer if you closed it. The icon will be dimmed to show when owocr is paused.
-- In these versions the engines included by the release build are already available, so you don't need to install anything else for those engines. Hayai OCR is currently an optional Python engine and can be added with `pip install "owocr[hayaiocr]"`. The tray icon is always enabled and can't be turned off.
+- In these versions the engines included by the release build are already available, so you don't need to install anything else for those engines. Hayai OCR and Manga OCR CPT-flex are optional Python engines and can be added with `pip install "owocr[hayaiocr]"` and `pip install "owocr[mangaocrcpt]"` respectively. The tray icon is always enabled and can't be turned off.
 
 ### Portable Windows ZIP (this fork)
 
@@ -33,7 +33,7 @@ If the portable `config` is empty, OWOCR reuses the user-level `%USERPROFILE%\.c
 
 ## Installation (terminal+Python, all operating systems)
 
-OwOCR has been tested on Python 3.11 to 3.14. It can be installed with `pip install owocr` after you install Python. You also need to have one or more OCR engines, check the list below for instructions. I recommend installing at least Google Lens on any operating system, and OneOCR if you are on Windows. Bing is pre-installed, Apple Vision and Live Text come pre-installed on macOS. Hayai OCR is an optional local engine.
+OwOCR has been tested on Python 3.11 to 3.14. It can be installed with `pip install owocr` after you install Python. You also need to have one or more OCR engines, check the list below for instructions. I recommend installing at least Google Lens on any operating system, and OneOCR if you are on Windows. Bing is pre-installed, Apple Vision and Live Text come pre-installed on macOS. Hayai OCR and Manga OCR CPT-flex are optional local engines.
 
 ## Usage (terminal)
 
@@ -97,6 +97,7 @@ Then launch owocr with: `PYNPUT_BACKEND_KEYBOARD=uinput owocr -r screencapture` 
 - [meikiocr](https://github.com/rtr46/meikiocr) - **Recommended** - Comparable to OneOCR in accuracy and CPU latency. It's limited to 64 text lines and 48 characters per line. → Terminal: install with `pip install "owocr[meikiocr]"`, if you have a Nvidia GPU you can do `pip uninstall onnxruntime && pip install onnxruntime-gpu` which makes it the fastest OCR available. Key: `k`
 - [NDLOCR-Lite](https://github.com/ndl-lab/ndlocr-lite) - An engine from the Japanese National Diet Library's Lab, mostly suited to documents and book scans. → Terminal: install with `pip install "owocr[ndlocrlite]"`, Key: `h`
 - [Manga OCR](https://github.com/kha-white/manga-ocr) (with optional [comic-text-detector](https://github.com/dmMaze/comic-text-detector) as segmenter) → Terminal: install with `pip install "owocr[mangaocr]"`, keys: `m` (regular, ideal for small text areas), `n` (segmented, ideal for manga panels/larger images with multiple text areas)
+- [Manga OCR CPT-flex](https://github.com/muscgab/manga-ocr-CPT) → Terminal: install with `pip install "owocr[mangaocrcpt]"`, key: `c`. Recognizes cropped Japanese text regions; it does not detect text boxes or return coordinates.
 - [Hayai OCR](https://github.com/NopeNopeGuy/hayai-ocr) → Terminal: install with `pip install "owocr[hayaiocr]"`, key: `y`. Hayai OCR v2.5-nova is the default model. It supports Japanese, Chinese, and Korean manga-style text and can recognize multiple lines in one pass. For the LiteRT backend, install `pip install "owocr[hayaiocr-litert]"`.
 - WinRT OCR: **Windows 10/11 only** - It can also be used by installing winocr on a Windows virtual machine and running the server there (`winocr_serve`) and specifying the IP address of the Windows VM/machine in the config file. → Terminal: install with `pip install "owocr[winocr]"`, key: `w`
 - [EasyOCR](https://github.com/JaidedAI/EasyOCR) → Terminal: install with `pip install "owocr[easyocr]"`, key: `e`
@@ -125,6 +126,7 @@ This uses code from/references these people/projects:
 - @ronaldoussoren for helping with the pyobjc VisionKit code
 - [Manga OCR](https://github.com/kha-white/manga-ocr) for inspiring and being the project owocr was originally derived from
 - [Hayai OCR](https://github.com/NopeNopeGuy/hayai-ocr) for the optional Hayai OCR engine integration (Apache-2.0)
+- [muscgab/manga-ocr-CPT](https://github.com/muscgab/manga-ocr-CPT) for the Manga OCR CPT-flex inference package (Apache-2.0; model weights are separately licensed CC BY-NC-SA 4.0)
 - [Mokuro](https://github.com/kha-white/mokuro) for the comic text detector integration code
 - [ocrmac](https://github.com/straussmaximilian/ocrmac) for the Apple Vision framework API
 - [ccylin2000_lipboard_monitor](https://github.com/vaimalaviya1233/ccylin2000_lipboard_monitor) for the Windows clipboard polling code
@@ -172,6 +174,16 @@ For example:
 The local SigLIP2 directory should contain the small processor/config files from `google/siglip2-base-patch16-naflex` (such as `config.json`, `preprocessor_config.json`, and the tokenizer files). The large `model.safetensors` file from the standalone SigLIP2 repository is not required by Hayai because the vision weights are already part of the Hayai checkpoint.
 
 When `hayainova_path` or `hayaiv2_path` points to a local model directory, OwOCR loads Hayai's `configuration_hayai.py` and `modeling_hayai.py` directly from that directory instead of copying them into Transformers' `HF_MODULES_CACHE`. No separate `hayai-modules` cache directory is required for local Hayai models.
+
+### Manga OCR CPT-flex notes
+
+Manga OCR CPT-flex is loaded lazily, so installing plain `owocr` does not install its inference dependencies. Install the optional extra when you want the engine:
+
+    pip install "owocr[mangaocrcpt]"
+
+In `[mangaocrcpt]`, set `pretrained_model_name_or_path` to either the Hugging Face repository `muscgab/manga-ocr-base-CPT-flex` or an existing local model directory. This uses the model path directly; there is no separate CPT-specific cache or automatic portable model-folder setting. The `backend` option accepts `auto` or `plain`, `decoder` accepts `fp32` or `fp16`, and `force_cpu` can be enabled to disable GPU use.
+
+The engine recognizes a cropped text region and does not perform text detection or produce bounding boxes. Use a separate detector/cropper for full manga panels. The inference package is Apache-2.0. The model weights are distributed separately under CC BY-NC-SA 4.0; commercial use requires separate permission. Model weights are not bundled with the portable executable.
 
 ### Portable local model paths
 

@@ -318,6 +318,12 @@ class ConfigGUI:
                 ('comictextdetector_path', 'str', 'Comic text detector model file (blank = default)', ''),
                 ('force_cpu', 'bool', 'Force CPU usage', False),
             ],
+            'mangaocrcpt': [
+                ('pretrained_model_name_or_path', 'str', 'CPT-flex model name or local directory', 'muscgab/manga-ocr-base-CPT-flex'),
+                ('backend', 'dropdown', 'Inference backend', ['auto', 'plain']),
+                ('decoder', 'dropdown', 'Decoder precision', ['fp32', 'fp16']),
+                ('force_cpu', 'bool', 'Force CPU usage', False),
+            ],
             'meikiocr': [
                 ('meikiocr_path', 'str', 'MeikiOCR Hugging Face model cache directory (blank = default)', ''),
             ],

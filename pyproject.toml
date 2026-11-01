@@ -87,6 +87,10 @@ mangaocr = [
     "shapely"
 ]
 
+mangaocrcpt = [
+    "manga-ocr-cpt @ git+https://github.com/muscgab/manga-ocr-CPT.git@2f6ceefbb3f43a9591f05480b4b17cd54453cc81"
+]
+
 hayaiocr = [
     "hayai-ocr>=2.3.0"
 ]

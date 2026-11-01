@@ -16,7 +16,7 @@ from urllib.parse import urlparse, parse_qs
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional
 
-from .paths import configure_portable_caches, get_cache_dir, get_config_dir, is_portable_mode
+from .paths import configure_portable_caches, get_cache_dir, get_config_dir, is_portable_mode, expand_path_variables
 
 configure_portable_caches()
 
@@ -650,6 +650,123 @@ class MangaOcr:
             img.close()
         return x
 
+
+
+
+class MangaOcrCPTEngine:
+    name = 'mangaocrcpt'
+    readable_name = 'Manga OCR CPT-flex'
+    key = 'c'
+    config_entry = 'mangaocrcpt'
+    available = False
+    local = True
+    manual_language = False
+    coordinate_support = False
+    threading_support = False
+    capabilities = EngineCapabilities(
+        symbols=False,
+        symbol_bounding_boxes=False,
+        words=False,
+        word_bounding_boxes=False,
+        lines=True,
+        line_bounding_boxes=False,
+        paragraphs=False,
+        paragraph_bounding_boxes=False
+    )
+
+    def _import_dependencies(self):
+        logger.info('Loading dependencies for Manga OCR CPT-flex')
+        try:
+            from manga_ocr_cpt import MangaOcrCPT as MangaOcrCPTModel
+        except ImportError:
+            logger.warning(
+                'Dependencies not available, Manga OCR CPT-flex will not work! '
+                'Install with "pip install \\"owocr[mangaocrcpt]\\"" .'
+            )
+            return False
+        self.model_class = MangaOcrCPTModel
+        return True
+
+    @staticmethod
+    def _bool_value(config, name, default=False):
+        value = config.get(name, default)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() == 'true'
+        return bool(value)
+
+    def __init__(self, config={}):
+        if not self._import_dependencies():
+            return
+
+        model_path = str(config.get(
+            'pretrained_model_name_or_path',
+            'muscgab/manga-ocr-base-CPT-flex'
+        )).strip() or 'muscgab/manga-ocr-base-CPT-flex'
+        self.model_path = expand_path_variables(os.path.expanduser(model_path))
+        self.backend = str(config.get('backend', 'auto')).strip().lower()
+        self.decoder = str(config.get('decoder', 'fp32')).strip().lower()
+        self.force_cpu = self._bool_value(config, 'force_cpu', False)
+
+        if self.backend not in ('auto', 'plain'):
+            logger.warning(
+                f'Unknown Manga OCR CPT-flex backend "{self.backend}". '
+                'Use "auto" or "plain".'
+            )
+            return
+        if self.decoder not in ('fp32', 'fp16'):
+            logger.warning(
+                f'Unknown Manga OCR CPT-flex decoder "{self.decoder}". '
+                'Use "fp32" or "fp16".'
+            )
+            return
+
+        # Load weights on first recognition, not during engine initialization.
+        self.model = None
+        self.available = True
+        logger.info('Manga OCR CPT-flex available; model loading is deferred until first use')
+
+    def _load_model(self):
+        device = 'cpu' if self.force_cpu else None
+        if not self.force_cpu:
+            try:
+                import torch
+                if not torch.cuda.is_available():
+                    mps = getattr(torch.backends, 'mps', None)
+                    if mps is not None and mps.is_available():
+                        device = 'mps'
+            except Exception:
+                pass
+
+        try:
+            logger.info(f'Loading Manga OCR CPT-flex model: {self.model_path}')
+            self.model = self.model_class(
+                model=self.model_path,
+                device=device,
+                backend=self.backend,
+                decoder=self.decoder
+            )
+            return True
+        except Exception as e:
+            logger.warning(f'Failed to load Manga OCR CPT-flex: {e}')
+            return False
+
+    def __call__(self, img):
+        img, is_path = input_to_pil_image(img)
+        if img is None:
+            return (False, 'Invalid image provided')
+
+        try:
+            if self.model is None and not self._load_model():
+                return (False, 'Failed to load Manga OCR CPT-flex model. See the log for details.')
+            return (True, [self.model(img)])
+        except Exception as e:
+            logger.exception(f'Manga OCR CPT-flex inference failed: {e}')
+            return (False, str(e))
+        finally:
+            if is_path:
+                img.close()
 
 
 HAYAI_SIGLIP2_REPO = 'google/siglip2-base-patch16-naflex'
