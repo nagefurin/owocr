@@ -143,7 +143,7 @@ This is a recognizer, not a text detector: it expects cropped text regions and d
 
 On JMangaBench_Read v1.3.3, CPT-flex ranks first among released OCR models (97.48 composite, 1.50% CER, 91.71% exact match; RTX 2080 Ti). This is a benchmark result, not a guarantee for every manga source; the benchmark authors also developed the model and used some benchmark data during development.
 
-The portable executable keeps its editable settings in `config/owocr_config.ini` next to the executable. For compatibility, an existing `~/.config/owocr_config.ini` is still used when the portable config file is absent. The PyInstaller build includes the CPT inference package and its dependencies; the model weights are deliberately downloaded on first use rather than embedded in the executable.
+The portable executable keeps its editable settings in `config/owocr_config.ini` next to the executable and its downloaded CPT-flex weights in `models/manga-ocr-base-CPT-flex/`. Move the entire extracted owocr folder to another machine to carry both settings and model weights with it. For compatibility, an existing `~/.config/owocr_config.ini` is still used when the portable config file is absent. The PyInstaller build includes the CPT inference package and its dependencies; the model weights are deliberately downloaded on first use rather than embedded in the executable.
 
 The inference package code is Apache-2.0. The model weights are CC BY-NC-SA 4.0; commercial use requires separate permission. Consult the upstream license and notice before redistributing or using the weights.
 

@@ -721,7 +721,7 @@ class MangaOcrCPTEngine:
         return (
             os.path.isabs(value)
             or value.startswith(('.', '~'))
-            or '\\\\' in value
+            or '\\' in value
             or bool(re.match(r'^[A-Za-z]:', value))
         )
 
@@ -734,6 +734,10 @@ class MangaOcrCPTEngine:
         # A user-supplied local model folder always takes precedence.
         model_reference = os.path.expandvars(os.path.expanduser(self.model_path))
         local_model = Path(model_reference)
+        if not local_model.is_absolute():
+            portable_candidate = self._portable_root() / local_model
+            if portable_candidate.is_dir():
+                local_model = portable_candidate
         if local_model.is_dir():
             if self._has_cpt_model_files(local_model):
                 return str(local_model.resolve())

@@ -97,3 +97,19 @@ def test_manga_ocr_cpt_engine_rejects_invalid_backend(monkeypatch):
     make_fake_cpt(monkeypatch)
     engine = MangaOcrCPTEngine(config={"backend": "unknown"})
     assert engine.available is False
+
+
+def test_manga_ocr_cpt_engine_resolves_relative_local_path_from_portable_root(monkeypatch, tmp_path):
+    make_fake_cpt(monkeypatch)
+    model_dir = tmp_path / "models" / "custom-cpt"
+    model_dir.mkdir(parents=True)
+    for filename in REQUIRED_MODEL_FILES:
+        (model_dir / filename).write_bytes(b"test")
+
+    monkeypatch.setattr(MangaOcrCPTEngine, "_portable_root", lambda self: tmp_path)
+    engine = MangaOcrCPTEngine(config={
+        "pretrained_model_name_or_path": "models/custom-cpt",
+        "portable_model": True,
+    })
+
+    assert engine._resolve_model_path() == str(model_dir.resolve())
