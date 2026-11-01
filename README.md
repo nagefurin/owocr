@@ -23,7 +23,7 @@ Easy to install Windows and macOS packages can be downloaded [here](https://gith
 - A "Log Viewer" window will shop up, showing information messages. A tray icon in the macOS menu bar/Windows task bar will show up. You can close the log viewer if you want.
 - By default owocr monitors the clipboard for images and outputs recognized text back to the clipboard. You can change this from the configuration, accessible from the tray icon.
 - With a left click on the tray icon you can pause/unpause on Windows, from the right click menu (left click on macOS) you can change the engine, pause/unpause, change the screen capture area selection, take a screenshot of the selected screen/window, launch the configuration, and reopen the log viewer if you closed it. The icon will be dimmed to show when owocr is paused.
-- In these versions the engines included by the release build are already available, so you don't need to install anything else for those engines. Hayai OCR and Manga OCR CPT-flex are optional Python engines and can be added with `pip install "owocr[hayaiocr]"` and `pip install "owocr[mangaocrcpt]"` respectively. The tray icon is always enabled and can't be turned off.
+- In these versions the engines included by the release build are already available, so you don't need to install anything else for those engines. The Windows portable build includes the CPT-flex inference engine. For a Python installation, Hayai OCR and Manga OCR CPT-flex are optional extras: `pip install "owocr[hayaiocr]"` and `pip install "owocr[mangaocrcpt]"`. CPT-flex model weights are not bundled.
 
 ### Portable Windows ZIP (this fork)
 
@@ -181,7 +181,7 @@ Manga OCR CPT-flex is loaded lazily, so installing plain `owocr` does not instal
 
     pip install "owocr[mangaocrcpt]"
 
-In `[mangaocrcpt]`, set `pretrained_model_name_or_path` to either the Hugging Face repository `muscgab/manga-ocr-base-CPT-flex` or an existing local model directory. This uses the model path directly; there is no separate CPT-specific cache or automatic portable model-folder setting. The `backend` option accepts `auto` or `plain`, `decoder` accepts `fp32` or `fp16`, and `force_cpu` can be enabled to disable GPU use.
+In `[mangaocrcpt]`, set `pretrained_model_name_or_path` to either the Hugging Face repository `muscgab/manga-ocr-base-CPT-flex` or an existing local model directory. This uses the model path directly; there is no separate CPT-specific cache or automatic portable model-folder setting. The `backend` option accepts `auto`, `cuda`, or `plain`, `decoder` accepts `fp32` or `fp16`, and `force_cpu` can be enabled to disable GPU use.
 
 The engine recognizes a cropped text region and does not perform text detection or produce bounding boxes. Use a separate detector/cropper for full manga panels. The inference package is Apache-2.0. The model weights are distributed separately under CC BY-NC-SA 4.0; commercial use requires separate permission. Model weights are not bundled with the portable executable.
 
