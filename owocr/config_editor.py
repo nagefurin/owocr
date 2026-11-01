@@ -320,7 +320,7 @@ class ConfigGUI:
             ],
             'mangaocrcpt': [
                 ('pretrained_model_name_or_path', 'str', 'CPT-flex model name or local directory', 'muscgab/manga-ocr-base-CPT-flex'),
-                ('backend', 'dropdown', 'Inference backend', ['auto', 'plain']),
+                ('backend', 'dropdown', 'Inference backend', ['auto', 'cuda', 'plain']),
                 ('decoder', 'dropdown', 'Decoder precision', ['fp32', 'fp16']),
                 ('force_cpu', 'bool', 'Force CPU usage', False),
             ],
