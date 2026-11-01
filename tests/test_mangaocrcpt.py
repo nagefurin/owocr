@@ -58,6 +58,13 @@ def test_manga_ocr_cpt_engine_defaults_to_hugging_face_model(monkeypatch):
     assert "initialized" not in captured
 
 
+def test_manga_ocr_cpt_engine_accepts_cuda_backend(monkeypatch):
+    install_fake_cpt(monkeypatch)
+    engine = MangaOcrCPTEngine(config={"backend": "cuda"})
+
+    assert engine.available is True
+
+
 def test_manga_ocr_cpt_engine_rejects_invalid_backend(monkeypatch):
     install_fake_cpt(monkeypatch)
     engine = MangaOcrCPTEngine(config={"backend": "unknown"})
