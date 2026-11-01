@@ -192,6 +192,21 @@ class Config:
         config = configparser.ConfigParser()
         res = config.read(self.config_path, encoding='utf-8')
 
+        # Migrate an existing per-user config into the portable folder when
+        # possible, so settings travel with the executable after this launch.
+        if (
+            res
+            and getattr(sys, 'frozen', False)
+            and self.config_path == self.user_config_path
+            and not os.path.isfile(self.portable_config_path)
+        ):
+            try:
+                os.makedirs(os.path.dirname(self.portable_config_path), exist_ok=True)
+                shutil.copy2(self.user_config_path, self.portable_config_path)
+                self.config_path = self.portable_config_path
+            except OSError:
+                pass
+
         if len(res) == 0:
             try:
                 config_folder = os.path.dirname(self.config_path)
